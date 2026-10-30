@@ -18,6 +18,7 @@ import {
   Bell,
   Sliders,
   Clock,
+  GitBranch,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -182,12 +183,40 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             </nav>
           </div>
 
+          {/* Phase 5: Renewal Management & FDR Lineage */}
+          <div>
+            <div className="px-3 mb-2 flex items-center justify-between text-[10px] font-bold tracking-wider text-gov-muted uppercase">
+              <span>Renewals & Lineage</span>
+              <span className="px-1.5 py-0.2 rounded bg-purple-100 text-purple-800 text-[9px] font-semibold">
+                Phase 5 Live
+              </span>
+            </div>
+            <nav className="space-y-1">
+              <NavLink to="/renewals" className={navLinkClass} onClick={onClose}>
+                <GitBranch className="w-4 h-4 text-purple-600" />
+                <span>Renewal Desk</span>
+              </NavLink>
+
+              <NavLink to="/renewals/queue" className={navLinkClass} onClick={onClose}>
+                <Clock className="w-4 h-4 text-blue-600" />
+                <span>Approval Queue</span>
+              </NavLink>
+
+              {(isAdmin || isInstUser) && (
+                <NavLink to="/renewals/new" className={navLinkClass} onClick={onClose}>
+                  <Coins className="w-4 h-4 text-emerald-600" />
+                  <span>Initiate Renewal</span>
+                </NavLink>
+              )}
+            </nav>
+          </div>
+
           {/* Future Modules Section (Strict Phase Boundary Visualization) */}
           <div className="pt-4 border-t border-gov-border">
             <div className="px-3 mb-2 flex items-center justify-between text-[10px] font-bold tracking-wider text-gov-muted uppercase">
               <span>Upcoming Capabilities</span>
-              <span className="px-1.5 py-0.2 rounded bg-purple-100 text-purple-800 text-[9px] font-semibold">
-                Phase 5
+              <span className="px-1.5 py-0.2 rounded bg-slate-100 text-slate-700 text-[9px] font-semibold">
+                Phase 6
               </span>
             </div>
             <div className="space-y-1 text-xs text-gray-400">
@@ -196,8 +225,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                   <Coins className="w-3.5 h-3.5" />
                   <span>Lien Release & Settlement</span>
                 </span>
-                <span className="text-[9px] bg-purple-50 text-purple-700 px-1 py-0.5 rounded border border-purple-200">
-                  Phase 5
+                <span className="text-[9px] bg-slate-100 text-slate-600 px-1 py-0.5 rounded border border-slate-200">
+                  Phase 6
                 </span>
               </div>
 
@@ -206,8 +235,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                   <Lock className="w-3.5 h-3.5" />
                   <span>OCR & Document Intelligence</span>
                 </span>
-                <span className="text-[9px] bg-purple-50 text-purple-700 px-1 py-0.5 rounded border border-purple-200">
-                  Phase 5
+                <span className="text-[9px] bg-slate-100 text-slate-600 px-1 py-0.5 rounded border border-slate-200">
+                  Phase 6
                 </span>
               </div>
             </div>

@@ -11,13 +11,27 @@ import {
   fetchFDRAttestations,
   fetchFDRHeartbeatHistory,
   triggerManualHeartbeatCheck,
+  fetchFDRLineage,
+  fetchFDRRenewalCases,
 } from '../../lib/api';
-import { FDR, FDRDocument, FDREvent, DocumentType, BankAttestation, HeartbeatCheck } from '../../types';
+import {
+  FDR,
+  FDRDocument,
+  FDREvent,
+  DocumentType,
+  BankAttestation,
+  HeartbeatCheck,
+  FDRLineageGraph,
+  RenewalCase,
+} from '../../types';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { TrustTierBadge } from '../../components/common/TrustTierBadge';
 import { HeartbeatStatusBadge } from '../../components/common/HeartbeatStatusBadge';
 import { MaturityCountdown } from '../../components/common/MaturityCountdown';
+import { FDRLineageTree } from '../../components/lineage/FDRLineageTree';
+import { LineageTimeline } from '../../components/lineage/LineageTimeline';
+import { RenewalHistoryTable } from '../../components/renewals/RenewalHistoryTable';
 import {
   ArrowLeft,
   FileText,
@@ -44,6 +58,7 @@ import {
   Fingerprint,
   FileSignature,
   Check,
+  GitBranch,
 } from 'lucide-react';
 
 export const FDRDetailPage: React.FC = () => {
@@ -52,10 +67,17 @@ export const FDRDetailPage: React.FC = () => {
   const { activeRole } = useAuth();
 
   const [fdr, setFdr] = useState<FDR | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'history' | 'verification' | 'heartbeat'>('overview');
+  const [activeTab, setActiveTab] = useState<
+    'overview' | 'documents' | 'history' | 'verification' | 'heartbeat' | 'lineage'
+  >('overview');
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  // Phase 5 Lineage & Renewals State
+  const [lineageGraph, setLineageGraph] = useState<FDRLineageGraph | null>(null);
+  const [renewalCases, setRenewalCases] = useState<RenewalCase[]>([]);
+  const [isLoadingLineage, setIsLoadingLineage] = useState<boolean>(false);
 
   // Phase 4 Heartbeat Surveillance State
   const [heartbeatChecks, setHeartbeatChecks] = useState<HeartbeatCheck[]>([]);
@@ -126,10 +148,28 @@ export const FDRDetailPage: React.FC = () => {
       loadAttestations(fdrId);
       // Load Phase 4 heartbeat surveillance history
       loadHeartbeatHistory(fdrId);
+      // Load Phase 5 lineage graph & renewal cases
+      loadLineageData(fdrId);
     } catch (err: any) {
       setError(err.message || 'Failed to retrieve FDR record details.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadLineageData = async (fdrId: string) => {
+    setIsLoadingLineage(true);
+    try {
+      const [lineageRes, casesRes] = await Promise.all([
+        fetchFDRLineage(fdrId),
+        fetchFDRRenewalCases(fdrId),
+      ]);
+      setLineageGraph(lineageRes);
+      setRenewalCases(casesRes.items);
+    } catch {
+      // Non-blocking fallback
+    } finally {
+      setIsLoadingLineage(false);
     }
   };
 
@@ -616,6 +656,18 @@ export const FDRDetailPage: React.FC = () => {
           >
             <Activity className="w-4 h-4 text-emerald-600" />
             <span>Heartbeat Surveillance ({heartbeatChecks.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('lineage')}
+            className={`py-3 px-1 text-xs font-semibold border-b-2 transition-colors flex items-center gap-2 ${
+              activeTab === 'lineage'
+                ? 'border-gov-navy text-gov-navy'
+                : 'border-transparent text-gov-muted hover:text-gov-navy hover:border-gray-300'
+            }`}
+          >
+            <GitBranch className="w-4 h-4 text-purple-600" />
+            <span>Lineage & Renewals ({renewalCases.length})</span>
           </button>
         </nav>
       </div>
@@ -1382,6 +1434,94 @@ export const FDRDetailPage: React.FC = () => {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Tab 6: Lineage & Renewals (Phase 5) */}
+      {activeTab === 'lineage' && (
+        <div className="space-y-6">
+          {/* Top Actions & Sub-header */}
+          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs font-bold uppercase tracking-wider text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
+                  Phase 5 Lineage
+                </span>
+                <span className="text-xs text-slate-500">
+                  Directed Acyclic Graph (DAG) Heritage Chain
+                </span>
+              </div>
+              <h2 className="text-lg font-bold text-slate-900">
+                Deposit Lineage & Succession Desk
+              </h2>
+              <p className="text-xs text-slate-600 mt-0.5">
+                Inspect predecessor deposits, approved renewal successors, and immutable lineage links for certificate #{fdr.fdr_number}.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Link
+                to={`/fdrs/${fdr.id}/lineage`}
+                className="px-4 py-2 rounded-lg border border-purple-300 text-purple-700 font-semibold text-xs hover:bg-purple-50 transition-colors shadow-sm inline-flex items-center gap-1.5"
+              >
+                <span>🌳 Fullscreen Explorer</span>
+              </Link>
+
+              <Link
+                to="/renewals/new"
+                className="px-4 py-2 rounded-lg bg-blue-700 text-white font-semibold text-xs hover:bg-blue-800 transition-colors shadow-sm inline-flex items-center gap-1.5"
+              >
+                <span>+ Initiate Renewal</span>
+              </Link>
+            </div>
+          </div>
+
+          {/* Status Note if Renewed */}
+          {fdr.lifecycle_status === 'renewed' && (
+            <div className="p-4 bg-purple-50 border border-purple-200 rounded-xl text-xs text-purple-900 flex items-start gap-2.5">
+              <span className="text-purple-600 font-bold text-sm">ℹ</span>
+              <div>
+                <strong>Deposit Officially Renewed:</strong> This FDR has transitioned to <em>renewed</em> status following supervisory verification of the replacement deposit and bank advice. The replacement deposit maintains its own active surveillance.
+              </div>
+            </div>
+          )}
+
+          {/* Interactive DAG Tree */}
+          {isLoadingLineage ? (
+            <div className="p-8 text-center text-slate-500 bg-white border border-slate-200 rounded-xl text-xs">
+              Loading lineage graph...
+            </div>
+          ) : lineageGraph ? (
+            <div className="space-y-6">
+              <FDRLineageTree lineage={lineageGraph} currentTargetId={fdr.id} />
+              
+              {/* Renewal Cases Associated */}
+              <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-3">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">
+                      Associated Renewal Cases ({renewalCases.length})
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Formal renewal proceedings referencing this FDR certificate
+                    </p>
+                  </div>
+                </div>
+
+                <RenewalHistoryTable
+                  cases={renewalCases}
+                  emptyMessage="No renewal cases have been initiated for this deposit yet."
+                />
+              </div>
+
+              {/* Chronological Heritage Timeline */}
+              <LineageTimeline lineage={lineageGraph} />
+            </div>
+          ) : (
+            <div className="p-8 text-center text-slate-400 bg-white border border-slate-200 rounded-xl text-xs">
+              No lineage relationship records found.
+            </div>
+          )}
         </div>
       )}
 

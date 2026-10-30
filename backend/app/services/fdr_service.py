@@ -176,6 +176,50 @@ LOCAL_FDR_STORE: List[Dict[str, Any]] = [
                 "created_at": datetime.now(timezone.utc) - timedelta(days=40),
             }
         ]
+    },
+    {
+        "id": "fdr-005",
+        "institution_id": "inst-01",
+        "institution_name": "National Highways Authority of India",
+        "institution_code": "INST-NHAI",
+        "bank_id": "bank-01",
+        "bank_name": "State Bank of India",
+        "bank_code": "SBIN",
+        "branch_id": "branch-01",
+        "branch_name": "SBI New Delhi Main Branch",
+        "ifsc_code": "SBIN0000691",
+        "region_id": "reg-01",
+        "region_name": "Northern Region",
+        "fdr_number": "FDR-2027-NHAI-99411",
+        "amount": Decimal("25000000.00"),
+        "currency": "INR",
+        "issue_date": date(2027, 1, 15),
+        "maturity_date": date(2028, 1, 15),
+        "interest_rate": Decimal("7.45"),
+        "lien_in_favour": "Chairman, National Highways Authority of India",
+        "lifecycle_status": "active",
+        "trust_tier": 2,
+        "verification_status": "api_verified",
+        "heartbeat_status": "healthy",
+        "remarks": "Replacement FDR for NH-48 Expressway Package 4 renewal",
+        "created_by": "usr-admin-01",
+        "created_at": datetime.now(timezone.utc) - timedelta(days=5),
+        "updated_at": datetime.now(timezone.utc) - timedelta(days=5),
+        "documents": [],
+        "events": [
+            {
+                "id": "evt-005",
+                "fdr_id": "fdr-005",
+                "institution_id": "inst-01",
+                "actor_id": "usr-admin-01",
+                "actor_name": "Dr. Rajeshwar Sharma",
+                "actor_email": "admin@fdrchain.gov.in",
+                "event_type": "fdr_registered",
+                "description": "Replacement FDR registered and verified via Bank API.",
+                "metadata": {"trust_tier": 2, "verification_status": "api_verified"},
+                "created_at": datetime.now(timezone.utc) - timedelta(days=5),
+            }
+        ]
     }
 ]
 

@@ -22,6 +22,11 @@ import {
   FDRAlert,
   HeartbeatDashboardStats,
   FDRHeartbeatStatus,
+  RenewalCase,
+  RenewalEvidence,
+  FDRLineageGraph,
+  MatchingResult,
+  RenewalDashboardStats,
 } from '../types';
 import {
   SEED_REGIONS,
@@ -37,6 +42,10 @@ import {
   SEED_HEARTBEAT_CHECKS,
   SEED_FDR_ALERTS,
   SEED_HEARTBEAT_STATS,
+  SEED_RENEWAL_CASES,
+  SEED_FDR_LINEAGE,
+  SEED_RENEWAL_EVIDENCE,
+  SEED_RENEWAL_STATS,
 } from './mockData';
 
 // Storage keys for local development persistence
@@ -53,6 +62,9 @@ const STORAGE_KEYS = {
   HEARTBEAT_POLICIES: 'fdr_dev_heartbeat_policies',
   HEARTBEAT_CHECKS: 'fdr_dev_heartbeat_checks',
   FDR_ALERTS: 'fdr_dev_alerts',
+  RENEWAL_CASES: 'fdr_dev_renewal_cases',
+  FDR_LINEAGE: 'fdr_dev_lineage',
+  RENEWAL_EVIDENCE: 'fdr_dev_renewal_evidence',
 };
 
 function getLocalOrInit<T>(key: string, seed: T[]): T[] {
@@ -1867,4 +1879,500 @@ export async function triggerSchedulerCycle(): Promise<any> {
     timestamp: new Date().toISOString(),
   };
 }
+
+// ==============================================================================
+// PHASE 5: RENEWAL MANAGEMENT & FDR LINEAGE API
+// ==============================================================================
+
+export async function fetchRenewalDashboardStats(): Promise<RenewalDashboardStats> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/renewals/dashboard/stats`, {
+      method: 'GET',
+      headers: { ...headers },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (err) {
+    // local fallback
+  }
+
+  const cases = getLocalOrInit(STORAGE_KEYS.RENEWAL_CASES, SEED_RENEWAL_CASES);
+  return {
+    total_cases: cases.length,
+    draft_cases: cases.filter((c) => c.status === 'draft').length,
+    submitted_cases: cases.filter((c) => c.status === 'submitted').length,
+    awaiting_bank_confirmation: cases.filter((c) => c.status === 'awaiting_bank_confirmation').length,
+    under_review_cases: cases.filter((c) => c.status === 'under_review').length,
+    approved_cases: cases.filter((c) => c.status === 'approved').length,
+    rejected_cases: cases.filter((c) => c.status === 'rejected').length,
+    upcoming_maturities_30d: 1,
+    pending_officer_review: cases.filter((c) => c.status === 'under_review' || c.status === 'submitted').length,
+    recent_cases: cases.slice(0, 5),
+  };
+}
+
+export async function fetchRenewalCases(params?: {
+  status?: string;
+  institution_id?: string;
+  search?: string;
+  page?: number;
+  page_size?: number;
+}): Promise<{ items: RenewalCase[]; total: number; page: number; page_size: number; total_pages: number }> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  const query = new URLSearchParams();
+  if (params?.status) query.set('status', params.status);
+  if (params?.institution_id) query.set('institution_id', params.institution_id);
+  if (params?.search) query.set('search', params.search);
+  if (params?.page) query.set('page', params.page.toString());
+  if (params?.page_size) query.set('page_size', params.page_size.toString());
+
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/renewals?${query.toString()}`, {
+      method: 'GET',
+      headers: { ...headers },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (err) {
+    // local fallback
+  }
+
+  let cases = getLocalOrInit(STORAGE_KEYS.RENEWAL_CASES, SEED_RENEWAL_CASES);
+  const fdrs = getLocalOrInit(STORAGE_KEYS.FDRS, SEED_FDRS);
+
+  if (params?.status) {
+    cases = cases.filter((c) => c.status === params.status);
+  }
+  if (params?.institution_id) {
+    cases = cases.filter((c) => c.institution_id === params.institution_id);
+  }
+  if (params?.search) {
+    const s = params.search.toLowerCase();
+    cases = cases.filter(
+      (c) =>
+        c.case_number?.toLowerCase().includes(s) ||
+        c.submission_notes?.toLowerCase().includes(s) ||
+        c.renewal_reference?.toLowerCase().includes(s)
+    );
+  }
+
+  const page = params?.page || 1;
+  const pageSize = params?.page_size || 10;
+  const total = cases.length;
+  const paginated = cases.slice((page - 1) * pageSize, page * pageSize).map((c) => ({
+    ...c,
+    original_fdr: fdrs.find((f) => f.id === c.original_fdr_id),
+    proposed_replacement_fdr: fdrs.find((f) => f.id === (c.proposed_replacement_fdr_id || c.proposed_fdr_id)),
+  }));
+
+  return {
+    items: paginated,
+    total,
+    page,
+    page_size: pageSize,
+    total_pages: Math.max(1, Math.ceil(total / pageSize)),
+  };
+}
+
+export async function fetchRenewalCaseById(caseId: string): Promise<RenewalCase> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/renewals/${caseId}`, {
+      method: 'GET',
+      headers: { ...headers },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    const err = await res.json().catch(() => ({}));
+    if (err.detail) throw new Error(err.detail);
+  } catch (err: any) {
+    if (err.message && !err.message.includes('fetch')) throw err;
+  }
+
+  const cases = getLocalOrInit(STORAGE_KEYS.RENEWAL_CASES, SEED_RENEWAL_CASES);
+  const item = cases.find((c) => c.id === caseId);
+  if (!item) throw new Error(`Renewal case ${caseId} not found`);
+
+  const fdrs = getLocalOrInit(STORAGE_KEYS.FDRS, SEED_FDRS);
+  const evidence = getLocalOrInit(STORAGE_KEYS.RENEWAL_EVIDENCE, SEED_RENEWAL_EVIDENCE);
+
+  return {
+    ...item,
+    original_fdr: fdrs.find((f) => f.id === item.original_fdr_id),
+    proposed_replacement_fdr: fdrs.find((f) => f.id === (item.proposed_replacement_fdr_id || item.proposed_fdr_id)),
+    evidence: evidence.filter((e) => e.renewal_case_id === caseId),
+  };
+}
+
+export async function createRenewalCase(
+  fdrId: string,
+  payload: { proposed_replacement_fdr_id?: string; submission_notes?: string }
+): Promise<RenewalCase> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/fdrs/${fdrId}/renewals`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    const err = await res.json().catch(() => ({}));
+    if (err.detail) throw new Error(err.detail);
+  } catch (err: any) {
+    if (err.message && !err.message.includes('fetch')) throw err;
+  }
+
+  const cases = getLocalOrInit(STORAGE_KEYS.RENEWAL_CASES, SEED_RENEWAL_CASES);
+  const fdrs = getLocalOrInit(STORAGE_KEYS.FDRS, SEED_FDRS);
+  const orig = fdrs.find((f) => f.id === fdrId);
+  if (!orig) throw new Error('Original FDR not found');
+
+  const newCase: RenewalCase = {
+    id: `case-${Date.now()}`,
+    case_number: `RC-2026-${String(cases.length + 1).padStart(4, '0')}`,
+    original_fdr_id: fdrId,
+    parent_fdr_id: fdrId,
+    proposed_replacement_fdr_id: payload.proposed_replacement_fdr_id,
+    proposed_fdr_id: payload.proposed_replacement_fdr_id,
+    institution_id: orig.institution_id,
+    institution_name: orig.institution_name,
+    bank_id: orig.bank_id,
+    bank_name: orig.bank_name,
+    status: 'draft',
+    case_status: 'draft',
+    submission_notes: payload.submission_notes,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+
+  cases.unshift(newCase);
+  saveLocal(STORAGE_KEYS.RENEWAL_CASES, cases);
+  return newCase;
+}
+
+export async function updateRenewalCase(
+  caseId: string,
+  payload: { proposed_replacement_fdr_id?: string; submission_notes?: string }
+): Promise<RenewalCase> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/renewals/${caseId}`, {
+      method: 'PATCH',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    const err = await res.json().catch(() => ({}));
+    if (err.detail) throw new Error(err.detail);
+  } catch (err: any) {
+    if (err.message && !err.message.includes('fetch')) throw err;
+  }
+
+  const cases = getLocalOrInit(STORAGE_KEYS.RENEWAL_CASES, SEED_RENEWAL_CASES);
+  const item = cases.find((c) => c.id === caseId);
+  if (!item) throw new Error('Renewal case not found');
+  if (payload.proposed_replacement_fdr_id !== undefined) {
+    item.proposed_replacement_fdr_id = payload.proposed_replacement_fdr_id;
+  }
+  if (payload.submission_notes !== undefined) {
+    item.submission_notes = payload.submission_notes;
+  }
+  item.updated_at = new Date().toISOString();
+  saveLocal(STORAGE_KEYS.RENEWAL_CASES, cases);
+  return item;
+}
+
+export async function submitRenewalCase(
+  caseId: string,
+  payload?: { proposed_replacement_fdr_id?: string; submission_notes?: string }
+): Promise<RenewalCase> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/renewals/${caseId}/submit`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload || {}),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    const err = await res.json().catch(() => ({}));
+    if (err.detail) throw new Error(err.detail);
+  } catch (err: any) {
+    if (err.message && !err.message.includes('fetch')) throw err;
+  }
+
+  const cases = getLocalOrInit(STORAGE_KEYS.RENEWAL_CASES, SEED_RENEWAL_CASES);
+  const item = cases.find((c) => c.id === caseId);
+  if (!item) throw new Error('Renewal case not found');
+  item.status = 'under_review';
+  item.case_status = 'under_review';
+  item.submitted_at = new Date().toISOString();
+  item.updated_at = new Date().toISOString();
+  saveLocal(STORAGE_KEYS.RENEWAL_CASES, cases);
+  return item;
+}
+
+export async function runCandidateMatching(caseId: string, candidateId?: string): Promise<MatchingResult> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  const query = candidateId ? `?candidate_id=${candidateId}` : '';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/renewals/${caseId}/match${query}`, {
+      method: 'POST',
+      headers: { ...headers },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // fallback
+  }
+
+  return {
+    evaluated_at: new Date().toISOString(),
+    total_candidates_evaluated: 1,
+    candidates: [
+      {
+        candidate_fdr_id: 'fdr-005',
+        candidate_fdr_number: 'FDR-2027-NHAI-99411',
+        bank_name: 'State Bank of India',
+        branch_name: 'SBI New Delhi Main Branch',
+        amount: 25000000,
+        currency: 'INR',
+        issue_date: '2027-01-15',
+        maturity_date: '2028-01-15',
+        trust_tier: 2,
+        heartbeat_status: 'alive',
+        score: 95.0,
+        confidence_level: 'high',
+        matching_factors: [
+          'Exact Beneficiary Institution Match',
+          'Exact Depository Bank Match',
+          'Exact Branch Code Match',
+          'Identical Principal Amount Match',
+        ],
+        mismatched_fields: [],
+        explanation: 'Excellent candidate with identical beneficiary institution, bank, branch, and amount.',
+      },
+    ],
+    advisory_notice:
+      'Matching suggestions are advisory only and must never be interpreted as automatic approval or legal lineage.',
+  };
+}
+
+export async function uploadRenewalEvidence(
+  caseId: string,
+  file: File,
+  evidenceType: string,
+  description?: string
+): Promise<RenewalEvidence> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('evidence_type', evidenceType);
+    if (description) formData.append('description', description);
+
+    const res = await fetch(`${apiUrl}/api/v1/renewals/${caseId}/evidence`, {
+      method: 'POST',
+      headers: { Authorization: headers.Authorization },
+      body: formData,
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    const err = await res.json().catch(() => ({}));
+    if (err.detail) throw new Error(err.detail);
+  } catch (err: any) {
+    if (err.message && !err.message.includes('fetch')) throw err;
+  }
+
+  const evidence = getLocalOrInit(STORAGE_KEYS.RENEWAL_EVIDENCE, SEED_RENEWAL_EVIDENCE);
+  const newEv: RenewalEvidence = {
+    id: `ev-${Date.now()}`,
+    renewal_case_id: caseId,
+    evidence_type: evidenceType as any,
+    file_name: file.name,
+    file_path: `inst-01/renewals/${caseId}/${file.name}`,
+    file_size_bytes: file.size,
+    mime_type: file.type || 'application/pdf',
+    sha256_checksum: 'a' + Math.random().toString(16).substring(2).padEnd(63, '0'),
+    description: description || `Uploaded ${evidenceType}`,
+    is_reviewed: false,
+    created_at: new Date().toISOString(),
+  };
+
+  evidence.push(newEv);
+  saveLocal(STORAGE_KEYS.RENEWAL_EVIDENCE, evidence);
+  return newEv;
+}
+
+export async function approveRenewalCase(
+  caseId: string,
+  payload: { decision_notes: string; relationship_type?: string }
+): Promise<any> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/renewals/${caseId}/approve`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    const err = await res.json().catch(() => ({}));
+    if (err.detail) throw new Error(err.detail);
+  } catch (err: any) {
+    if (err.message && !err.message.includes('fetch')) throw err;
+  }
+
+  const cases = getLocalOrInit(STORAGE_KEYS.RENEWAL_CASES, SEED_RENEWAL_CASES);
+  const fdrs = getLocalOrInit(STORAGE_KEYS.FDRS, SEED_FDRS);
+  const item = cases.find((c) => c.id === caseId);
+  if (!item) throw new Error('Renewal case not found');
+
+  item.status = 'approved';
+  item.case_status = 'approved';
+  item.reviewed_at = new Date().toISOString();
+  item.decision_notes = payload.decision_notes;
+  saveLocal(STORAGE_KEYS.RENEWAL_CASES, cases);
+
+  const orig = fdrs.find((f) => f.id === item.original_fdr_id);
+  if (orig) {
+    orig.lifecycle_status = 'renewed';
+    saveLocal(STORAGE_KEYS.FDRS, fdrs);
+  }
+
+  return {
+    success: true,
+    case_id: caseId,
+    case_number: item.case_number,
+    status: 'approved',
+    lineage_id: `lineage-${Date.now()}`,
+    parent_fdr_id: item.original_fdr_id,
+    child_fdr_id: item.proposed_replacement_fdr_id,
+    message: 'Renewal case approved and lineage committed successfully.',
+  };
+}
+
+export async function rejectRenewalCase(
+  caseId: string,
+  payload: { rejection_reason: string }
+): Promise<RenewalCase> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/renewals/${caseId}/reject`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    const err = await res.json().catch(() => ({}));
+    if (err.detail) throw new Error(err.detail);
+  } catch (err: any) {
+    if (err.message && !err.message.includes('fetch')) throw err;
+  }
+
+  const cases = getLocalOrInit(STORAGE_KEYS.RENEWAL_CASES, SEED_RENEWAL_CASES);
+  const item = cases.find((c) => c.id === caseId);
+  if (!item) throw new Error('Renewal case not found');
+
+  item.status = 'rejected';
+  item.case_status = 'rejected';
+  item.reviewed_at = new Date().toISOString();
+  item.decision_notes = `REJECTED: ${payload.rejection_reason}`;
+  saveLocal(STORAGE_KEYS.RENEWAL_CASES, cases);
+  return item;
+}
+
+export async function fetchFDRLineage(fdrId: string): Promise<FDRLineageGraph> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/fdrs/${fdrId}/lineage`, {
+      method: 'GET',
+      headers: { ...headers },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // fallback
+  }
+
+  const fdrs = getLocalOrInit(STORAGE_KEYS.FDRS, SEED_FDRS);
+  const lineageEdges = getLocalOrInit(STORAGE_KEYS.FDR_LINEAGE, SEED_FDR_LINEAGE);
+
+  const centerFdr = fdrs.find((f) => f.id === fdrId) || fdrs[0];
+  const relevantEdges = lineageEdges.filter(
+    (e) => e.parent_fdr_id === centerFdr.id || e.child_fdr_id === centerFdr.id
+  );
+
+  const connectedIds = new Set<string>([centerFdr.id]);
+  relevantEdges.forEach((e) => {
+    connectedIds.add(e.parent_fdr_id);
+    connectedIds.add(e.child_fdr_id);
+  });
+
+  const nodes = Array.from(connectedIds)
+    .map((id) => fdrs.find((f) => f.id === id))
+    .filter(Boolean)
+    .map((f, idx) => ({
+      fdr_id: f!.id,
+      id: f!.id,
+      fdr_number: f!.fdr_number,
+      institution_id: f!.institution_id,
+      institution_name: f!.institution_name,
+      bank_id: f!.bank_id,
+      bank_name: f!.bank_name,
+      branch_name: f!.branch_name,
+      amount: f!.amount,
+      currency: f!.currency || 'INR',
+      issue_date: f!.issue_date,
+      maturity_date: f!.maturity_date,
+      lifecycle_status: f!.lifecycle_status,
+      trust_tier: f!.trust_tier,
+      verification_status: f!.verification_status,
+      heartbeat_status: f!.heartbeat_status,
+      is_current: f!.id === fdrId,
+      generation_level: idx,
+    }));
+
+  return {
+    root_fdr_id: nodes[0]?.fdr_id || fdrId,
+    center_fdr_id: fdrId,
+    total_nodes: nodes.length,
+    total_edges: relevantEdges.length,
+    nodes,
+    edges: relevantEdges,
+    has_cycles: false,
+    is_leaf: relevantEdges.every((e) => e.parent_fdr_id !== fdrId),
+  };
+}
+
+export async function fetchFDRRenewalCases(fdrId: string): Promise<{ items: RenewalCase[]; total: number }> {
+  return fetchRenewalCases({ search: fdrId });
+}
+
 

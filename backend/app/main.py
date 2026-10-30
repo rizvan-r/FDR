@@ -3,7 +3,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.config import settings
-from app.routers import health, users, fdrs, verification, heartbeat
+from app.routers import health, users, fdrs, verification, heartbeat, renewals
 
 # Configure structured logging
 logging.basicConfig(
@@ -14,8 +14,8 @@ logger = logging.getLogger("fdr_chain.api")
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    description="FDR-Chain Institutional Security Deposit / Fixed Deposit Receipt Management Portal - Phase 4 API",
-    version="4.0.0 (Phase 4: Heartbeat Monitoring)",
+    description="FDR-Chain Institutional Security Deposit / Fixed Deposit Receipt Management Portal - Phase 5 API",
+    version="5.0.0 (Phase 5: Renewal Management & FDR Lineage)",
     docs_url="/docs",
     redoc_url="/redoc"
 )
@@ -48,13 +48,14 @@ app.include_router(users.router)
 app.include_router(fdrs.router)
 app.include_router(verification.router)
 app.include_router(heartbeat.router, prefix="/api/v1")
+app.include_router(renewals.router)
 
 @app.get("/")
 async def root():
     return {
         "title": "FDR-Chain API Gateway",
         "description": "Government-style Security Deposit / FDR Management Portal (SIH 2026)",
-        "phase": "Phase 4 - Heartbeat Monitoring, Policy Administration & Regulatory Alerts",
+        "phase": "Phase 5 - Renewal Management & FDR Lineage (Directed Acyclic Graph)",
         "health": "/api/health",
         "docs": "/docs"
     }

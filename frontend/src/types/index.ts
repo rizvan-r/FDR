@@ -147,7 +147,8 @@ export type FDRLifecycleStatus =
   | 'under_review'
   | 'matured'
   | 'released'
-  | 'invoked';
+  | 'invoked'
+  | 'renewed';
 
 export type FDRVerificationStatus =
   | 'institution_declared'
@@ -453,3 +454,164 @@ export interface FDRFilterParams {
   page?: number;
   page_size?: number;
 }
+
+// ==============================================================================
+// PHASE 5: RENEWAL MANAGEMENT & FDR LINEAGE (DIRECTED ACYCLIC GRAPH)
+// ==============================================================================
+
+export type RenewalCaseStatus =
+  | 'draft'
+  | 'submitted'
+  | 'matching'
+  | 'evidence_pending'
+  | 'awaiting_bank_confirmation'
+  | 'bank_confirmed'
+  | 'under_review'
+  | 'approved'
+  | 'rejected'
+  | 'cancelled';
+
+export type LineageRelationshipType = 'renewal' | 'replacement';
+
+export type RenewalEvidenceType =
+  | 'replacement_fdr_copy'
+  | 'bank_renewal_advice'
+  | 'original_fdr_closure'
+  | 'bank_pledge_confirmation'
+  | 'other'
+  | 'other_supporting_document';
+
+export interface RenewalEvidence {
+  id: string;
+  renewal_case_id: string;
+  document_id?: string;
+  evidence_type: RenewalEvidenceType;
+  file_name?: string;
+  file_path?: string;
+  file_size_bytes?: number;
+  mime_type?: string;
+  sha256_checksum?: string;
+  description?: string;
+  is_reviewed: boolean;
+  reviewed_by?: string;
+  reviewed_at?: string;
+  review_notes?: string;
+  uploaded_by?: string;
+  created_at: string;
+}
+
+export interface RenewalMatchCandidate {
+  candidate_fdr_id: string;
+  candidate_fdr_number?: string;
+  bank_name?: string;
+  branch_name?: string;
+  amount?: number;
+  currency?: string;
+  issue_date?: string;
+  maturity_date?: string;
+  trust_tier?: number;
+  heartbeat_status?: string;
+  score: number;
+  confidence_level?: 'high' | 'moderate' | 'low';
+  matching_factors: string[];
+  mismatched_fields: string[];
+  explanation?: string;
+}
+
+export interface MatchingResult {
+  parent_fdr_id?: string;
+  evaluated_at?: string;
+  total_candidates_evaluated: number;
+  candidates: RenewalMatchCandidate[];
+  suggestions?: RenewalMatchCandidate[];
+  advisory_notice: string;
+}
+
+export interface RenewalCase {
+  id: string;
+  case_number: string;
+  original_fdr_id: string;
+  parent_fdr_id?: string;
+  proposed_replacement_fdr_id?: string;
+  proposed_fdr_id?: string;
+  institution_id: string;
+  institution_name?: string;
+  bank_id?: string;
+  bank_name?: string;
+  status: RenewalCaseStatus;
+  case_status?: RenewalCaseStatus;
+  submission_notes?: string;
+  renewal_reference?: string;
+  matching_score?: number;
+  match_score?: number;
+  matching_analysis?: Record<string, any>;
+  submitted_by?: string;
+  submitted_at?: string;
+  reviewer_id?: string;
+  reviewed_at?: string;
+  decision_notes?: string;
+  created_at: string;
+  updated_at: string;
+  original_fdr?: FDR;
+  proposed_replacement_fdr?: FDR;
+  evidence?: RenewalEvidence[];
+}
+
+export interface FDRLineageNode {
+  fdr_id: string;
+  id?: string;
+  fdr_number: string;
+  institution_id: string;
+  institution_name?: string;
+  bank_id?: string;
+  bank_name?: string;
+  branch_name?: string;
+  amount: number;
+  currency: string;
+  issue_date?: string;
+  maturity_date?: string;
+  lifecycle_status: FDRLifecycleStatus;
+  trust_tier: number;
+  verification_status?: string;
+  heartbeat_status: string;
+  is_current?: boolean;
+  is_current_target?: boolean;
+  generation_level: number;
+}
+
+export interface FDRLineageEdge {
+  id: string;
+  parent_fdr_id: string;
+  child_fdr_id: string;
+  renewal_case_id: string;
+  relationship_type: LineageRelationshipType;
+  approved_by?: string;
+  approved_at?: string;
+  created_at?: string;
+}
+
+export interface FDRLineageGraph {
+  root_fdr_id: string;
+  center_fdr_id?: string;
+  target_fdr_id?: string;
+  total_nodes: number;
+  total_edges: number;
+  nodes: FDRLineageNode[];
+  edges: FDRLineageEdge[];
+  has_cycles: boolean;
+  is_leaf: boolean;
+}
+
+export interface RenewalDashboardStats {
+  total_cases: number;
+  draft_cases: number;
+  submitted_cases: number;
+  awaiting_bank_confirmation: number;
+  under_review_cases: number;
+  approved_cases: number;
+  rejected_cases: number;
+  upcoming_maturities_30d: number;
+  pending_officer_review: number;
+  recent_cases: RenewalCase[];
+}
+

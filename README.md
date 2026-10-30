@@ -1,7 +1,7 @@
 # FDR-Chain — Institutional Fixed Deposit Receipt (FDR) Management Portal
 
 **Smart India Hackathon 2026**  
-**Phase 4 Release: Continuous Heartbeat Surveillance, Automated Scheduler & Regulatory Alert Desk**
+**Phase 5 Release: Renewal Management, 6-Signal Advisory Matching & FDR Lineage Graph**
 
 ---
 
@@ -13,6 +13,58 @@
 - **Phase 2**: FDR Repository, Document Vault with SHA-256 integrity, and Immutable Event Audit Trail.
 - **Phase 3**: Multi-Tier Trust Engine (Tier 1 Declared → Tier 2 Bank Confirmed → Tier 3 Digitally Signed), RFC 8785 Canonical JSON Serialization, Ed25519 Digital Signatures, 48-Hour Single-Use Verification Tokens with Snapshot Protection, Public Key Registry, and Mock Bank Testing Sandbox.
 - **Phase 4**: Continuous Heartbeat Surveillance, Configurable Cadence Policies, Autonomous Background Scheduler (APScheduler), Broken Lien Quarantine Protection, Retry & Timeout Escalation, Milestone Maturity Reminders, and Officer Regulatory Alert Desk.
+- **Phase 5**: Governed Renewal Management, 6-Signal Deterministic Candidate Matching Engine, Independent Replacement FDR Trust Tier $\ge 2$ Enforcement, Strict Directed Acyclic Graph (DAG) Lineage with Cycle Detection, and End-to-End Visual Provenance Explorer.
+
+---
+
+## 🔄 Renewal Management & Lineage Graph (Phase 5)
+
+Phase 5 addresses deposit rollovers and replacements through a governed supervisory workflow:
+
+```
+                    ┌─────────────────────────┐
+                    │       DRAFT CASE        │
+                    │ (Institution Initiated) │
+                    └────────────┬────────────┘
+                                 │ Attach Evidence & Run Advisory Match
+                                 ▼
+                    ┌─────────────────────────┐
+                    │        SUBMITTED        │
+                    │   (Ready for Review)    │
+                    └────────────┬────────────┘
+                                 │
+             ┌───────────────────┴───────────────────┐
+             │ Missing Confirmation                  │
+             ▼                                       ▼
+┌─────────────────────────┐             ┌─────────────────────────┐
+│AWAITING BANK CONFIRM    │             │   SUPERVISORY REVIEW    │
+│(Needs Tier 2 / Bank Att)│             │ (Officer Queue / Match) │
+└────────────┬────────────┘             └──────┬───────────┬──────┘
+             │ Bank Confirmed                  │           │
+             └───────────────────┐             │ Approved  │ Rejected
+                                 ▼             ▼           ▼
+                                ┌─────────────────┐   ┌─────────────────┐
+                                │    APPROVED     │   │    REJECTED     │
+                                │ (Atomic Commit) │   │ (With Justific) │
+                                └────────┬────────┘   └─────────────────┘
+                                         │
+        ┌────────────────────────────────┴────────────────────────────────┐
+        │ Atomic State Transitions:                                       │
+        │ 1. Renewal Case status -> 'approved'                            │
+        │ 2. Lineage edge created: Parent FDR -> Child Replacement FDR    │
+        │ 3. Parent FDR lifecycle status -> 'renewed'                     │
+        │ 4. Child FDR remains 'active' with verified Trust Tier >= 2     │
+        └─────────────────────────────────────────────────────────────────┘
+```
+
+### Key Phase 5 Architectural Guarantees:
+1. **Advisory Matching Engine**: Evaluates 6 weighted signals (Bank 25%, Branch 15%, Amount 25%, Chronology 15%, Lien 10%, Reference 10%). Generates confidence rating and discrepancy tags without automatic approval execution.
+2. **Independent Verification**: A replacement deposit cannot inherit trust or signatures from its predecessor. It must independently attain Trust Tier $\ge 2$ or official bank confirmation.
+3. **Directed Acyclic Graph (DAG) Lineage**:
+   - Single Predecessor Invariant: `child_fdr_id UNIQUE` constraint guarantees an FDR has at most one predecessor.
+   - Anti-Reflexivity: Prohibits self-linking (`CHECK parent_fdr_id <> child_fdr_id`).
+   - Acyclicity: Enforced via recursive search in both application service and database trigger (`prevent_lineage_cycle()`).
+4. **Interactive Multi-Generation Visualization**: Fullscreen and tab-integrated SVG tree displaying origin root deposits, intermediate generational rollovers, and active leaf deposits.
 
 ---
 
@@ -55,7 +107,7 @@ Pledged government FDRs are protected against silent liquidation, account closur
 | **`not_started`** | Slate | Deposit registered, scheduled for initial baseline verification. |
 | **`alive`** | Emerald | Depository bank confirmed deposit existence and active lien standing within policy window. |
 | **`stale`** | Amber | Elapsed time exceeded freshness threshold (`stale_after_days`). Fresh check in flight. |
-| **`broken`** | Rose (Critical) | Bank explicitly reported lien discharged, account closed, or decree attachment. **Strict Invariant**: Cannot silently revert to `alive` without documented review in the alert desk. |
+| **`broken`** | Rose (Critical) | Bank explicitly reported lien discharged, account closed, or decree attachment. Cannot silently revert to `alive`. |
 | **`unresponsive`** | Orange (Critical) | Depository branch failed to acknowledge or respond after maximum retry attempts. |
 
 ---
@@ -94,6 +146,7 @@ Execute migrations sequentially in your [Supabase SQL Editor](https://supabase.c
 - Phase 2: `04_phase2_schema.sql`, `05_phase2_rls_policies.sql`, `06_phase2_seed_data.sql`
 - Phase 3: `07_phase3_schema.sql`, `08_phase3_rls_policies.sql`, `09_phase3_seed_data.sql`
 - Phase 4: `10_phase4_schema.sql`, `11_phase4_rls_policies.sql`, `12_phase4_seed_data.sql`
+- Phase 5: `13_phase5_schema.sql`, `14_phase5_rls_policies.sql`, `15_phase5_seed_data.sql`
 
 ### 2. Backend Gateway (FastAPI)
 ```powershell
@@ -101,18 +154,13 @@ cd backend
 python -m pip install -r requirements.txt
 python run.py
 ```
-*Backend runs at `http://127.0.0.1:8000` (API documentation at `http://127.0.0.1:8000/docs`).*
+*Backend runs at `http://127.0.0.1:8000` (Swagger UI at `http://127.0.0.1:8000/docs`).*
 
 ### 3. Background Surveillance Scheduler (APScheduler)
 Run a single one-shot surveillance cycle:
 ```powershell
 cd backend
 python run_scheduler.py --once
-```
-Run as a continuous background daemon (e.g. every 5 minutes):
-```powershell
-cd backend
-python run_scheduler.py --interval 300
 ```
 
 ### 4. Frontend Web Portal (React + Vite)
@@ -125,37 +173,45 @@ npm.cmd run dev
 
 ---
 
-## 🧪 Comprehensive Automated Test Suites (33/33 Passed)
+## 🧪 Comprehensive Automated Test Suites (51/51 Passed)
 
-Execute all automated unit and integration tests across Phase 2, Phase 3, and Phase 4 from PowerShell:
+Execute all 51 automated unit and integration tests across Phase 2, Phase 3, Phase 4, and Phase 5 from PowerShell:
 ```powershell
 cd backend
-python -m pytest test_phase2.py test_phase3.py test_phase4.py -v
+python -m pytest test_phase2.py test_phase3.py test_phase4.py test_phase5.py -v
 ```
 
 ### Test Coverage Highlights:
 - **Phase 2 Tests (7/7 Passed)**: Date order validation, Tier 1 immutability on creation, prohibited field update prevention, stats calculation, detail inspection.
 - **Phase 3 Tests (13/13 Passed)**: Tier 1 initial standing, Tier 2 single-use token lifecycle, duplicate request prevention, token consumption & replay protection, bank rejection, Tier 3 Ed25519 cryptographic signatures, tampered payload detection, corrupted signature rejection, unknown key rejection, nonce replay prevention, admin bank key registry CRUD.
-- **Phase 4 Tests (13/13 Passed)**:
-  - Surveillance metrics dashboard aggregation (`total_monitored_fdrs`, compliance %).
-  - Monitored registry status tabs & policy intervals decoration.
-  - Manual interim check dispatch & active check uniqueness invariant (400 on duplicate).
-  - Heartbeat policy administration CRUD & non-admin RBAC protection (403 Forbidden).
-  - Freshness audit elapsed threshold transition (`alive -> stale`).
-  - Explicit bank rejection negative evidence transition to `broken` with Critical alert.
-  - State machine quarantine invariant: `broken` cannot silently revert to `alive`.
-  - Retry & timeout lifecycle: retry increments, deadline extension, exhaustion to `unresponsive`.
-  - Maturity milestone reminders (90, 60, 30, 7, 1, 0, overdue) and deduplication guarantee.
-  - Regulatory Alert Desk: read toggle, officer assignment, documented resolution, 400 on duplicate resolve.
-  - Scheduler composite cycle execution and statistics API.
+- **Phase 4 Tests (13/13 Passed)**: Heartbeat dashboard metrics, monitored registry status tabs, manual interim check dispatch, heartbeat policy administration CRUD, freshness audit elapsed threshold transition (`alive -> stale`), bank rejection transition to `broken`, state machine quarantine invariant, retry & timeout lifecycle, milestone maturity reminders, alert desk lifecycle.
+- **Phase 5 Tests (18/18 Passed)**:
+  - Renewal draft creation with auto-formatted case numbers (`REN-YYYY-XXXX`).
+  - Draft case editing and transition to `submitted`.
+  - Immutability enforcement on submitted/approved cases.
+  - Cross-institution reference rejection (HTTP 400).
+  - 6-signal candidate matching scoring & advisory guarantee verification.
+  - Evidence document upload and MIME type verification.
+  - Non-supervisory approval prevention (HTTP 403) and duplicate approval prevention (HTTP 400).
+  - Mandatory justification on case rejection.
+  - Recursive lineage DAG graph traversal (ancestors and descendants).
+  - Anti-reflexivity constraint (self-link prevention).
+  - Conflicting predecessor rejection (single predecessor constraint).
+  - Cycle detection and prevention ($A \to B \to C \to A$ rejected).
+  - Single-node graph handling for isolated FDRs.
+  - Renewal operations dashboard metrics aggregation.
 
 ---
 
 ## 📚 Technical Documentation Index
 
 Detailed architectural and developer guides are available in the [`docs/`](file:///i:/Richu/Projects/SIH/FDR/docs) directory:
+- [Phase 5 Renewal Architecture](file:///i:/Richu/Projects/SIH/FDR/docs/PHASE_5_RENEWAL_ARCHITECTURE.md)
+- [Phase 5 Database Schema & RLS](file:///i:/Richu/Projects/SIH/FDR/docs/PHASE_5_DATABASE.md)
+- [Phase 5 6-Signal Matching Engine](file:///i:/Richu/Projects/SIH/FDR/docs/PHASE_5_MATCHING.md)
+- [Phase 5 Lineage Graph & DAG Integrity](file:///i:/Richu/Projects/SIH/FDR/docs/PHASE_5_LINEAGE.md)
+- [Phase 5 REST API Reference](file:///i:/Richu/Projects/SIH/FDR/docs/PHASE_5_API.md)
+- [Phase 5 Testing & Quality Assurance Report](file:///i:/Richu/Projects/SIH/FDR/docs/PHASE_5_TESTING.md)
 - [Phase 4 Heartbeat Architecture](file:///i:/Richu/Projects/SIH/FDR/docs/PHASE_4_HEARTBEAT_ARCHITECTURE.md)
-- [Phase 4 Database Schema & RLS](file:///i:/Richu/Projects/SIH/FDR/docs/PHASE_4_DATABASE.md)
 - [Phase 4 Scheduler Engine & Worker Guide](file:///i:/Richu/Projects/SIH/FDR/docs/PHASE_4_SCHEDULER.md)
-- [Phase 4 REST API Reference](file:///i:/Richu/Projects/SIH/FDR/docs/PHASE_4_API.md)
-- [Phase 4 Testing & Verification Report](file:///i:/Richu/Projects/SIH/FDR/docs/PHASE_4_TESTING.md)
+

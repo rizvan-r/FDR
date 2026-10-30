@@ -22,6 +22,13 @@ import { HeartbeatMonitoringPage } from './pages/heartbeat/HeartbeatMonitoringPa
 import { AlertCenterPage } from './pages/heartbeat/AlertCenterPage';
 import { HeartbeatPolicyPage } from './pages/admin/HeartbeatPolicyPage';
 
+// Phase 5: Renewal Management & FDR Lineage Pages
+import { RenewalDashboardPage } from './pages/renewals/RenewalDashboardPage';
+import { CreateRenewalPage } from './pages/renewals/CreateRenewalPage';
+import { RenewalReviewPage } from './pages/renewals/RenewalReviewPage';
+import { RenewalApprovalQueuePage } from './pages/renewals/RenewalApprovalQueuePage';
+import { FDRLineagePage } from './pages/fdrs/FDRLineagePage';
+
 // Main Pages
 import { DashboardOverviewPage } from './pages/dashboard/DashboardOverviewPage';
 import { FDRListPage } from './pages/fdrs/FDRListPage';
@@ -84,6 +91,7 @@ export const App: React.FC = () => {
                 }
               />
               <Route path="/fdrs/:id" element={<FDRDetailPage />} />
+              <Route path="/fdrs/:id/lineage" element={<FDRLineagePage />} />
 
               {/* Institutions Master */}
               <Route
@@ -168,6 +176,33 @@ export const App: React.FC = () => {
                   </RoleRoute>
                 }
               />
+
+              {/* Phase 5: Renewal Management & Lineage Desk */}
+              <Route path="/renewals" element={<RenewalDashboardPage />} />
+              <Route
+                path="/renewals/new"
+                element={
+                  <RoleRoute allowedRoles={['institution_user', 'system_admin']}>
+                    <CreateRenewalPage />
+                  </RoleRoute>
+                }
+              />
+              <Route
+                path="/renewals/queue"
+                element={
+                  <RoleRoute
+                    allowedRoles={[
+                      'system_admin',
+                      'bureau_officer',
+                      'regional_officer',
+                      'finance_officer',
+                    ]}
+                  >
+                    <RenewalApprovalQueuePage />
+                  </RoleRoute>
+                }
+              />
+              <Route path="/renewals/:id" element={<RenewalReviewPage />} />
 
               {/* Profile & Security */}
               <Route path="/profile" element={<ProfilePage />} />

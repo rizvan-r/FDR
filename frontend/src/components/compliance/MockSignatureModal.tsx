@@ -63,7 +63,7 @@ export const MockSignatureModal: React.FC<MockSignatureModalProps> = ({
               DEMO — NOT A LEGALLY VALID DIGITAL SIGNATURE
             </p>
             <p className="text-[10px] text-amber-800 leading-relaxed">
-              This simulated workflow demonstrates digital certificate hashing, audit trail linking, and visual sealing under Phase 7 specifications. Real production deployment requires CCA-approved Class 3 DSC tokens.
+              This simulated workflow demonstrates digital certificate hashing, audit trail linking, and visual sealing under institutional specifications. Real production deployment requires CCA-approved Class 3 DSC tokens.
             </p>
           </div>
 
@@ -109,7 +109,7 @@ export const MockSignatureModal: React.FC<MockSignatureModalProps> = ({
                 className="mt-0.5 rounded border-gov-border text-gov-blue focus:ring-gov-blue"
               />
               <span className="text-[11px] text-gov-text font-medium leading-relaxed">
-                I acknowledge that this e-sign action is an educational demonstration on the FDR-Chain evaluation portal and satisfies Phase 7 governance criteria.
+                I acknowledge that this e-sign action is an educational demonstration on the FDR-Chain evaluation portal and satisfies institutional governance criteria.
               </span>
             </label>
           </div>

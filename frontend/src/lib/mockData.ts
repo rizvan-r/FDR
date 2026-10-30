@@ -1984,7 +1984,7 @@ WHEREAS, {{institution_name}} has fulfilled statutory curriculum obligations and
 
 IT IS HEREBY DECLARED that AICTE raises no objection to the preliminary release of lien on Fixed Deposit Receipt No. {{fdr_number}} for {{currency}} {{amount}}, subject to final audit settlement and verification of outstanding student dues.
 
-This clearance is an interim administrative sanction under Phase 7 Governance. Formal release execution and settlement will proceed in accordance with statutory closure guidelines.
+This clearance is an interim administrative sanction under Statutory Governance. Formal release execution and settlement will proceed in accordance with statutory closure guidelines.
 
 By Order of the Executive Committee,
 Advisor (Approval), AICTE`,

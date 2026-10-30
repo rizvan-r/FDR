@@ -1,0 +1,38 @@
+[
+  {
+    "page": "fdrs_list",
+    "type": "ELEMENT_OVERFLOW",
+    "issues": [
+      {
+        "tag": "DIV",
+        "className": "font-medium text-gov-text truncate",
+        "scrollWidth": 272,
+        "clientWidth": 160
+      },
+      {
+        "tag": "DIV",
+        "className": "text-[10px] text-gov-muted truncate mt-0.5",
+        "scrollWidth": 306,
+        "clientWidth": 160
+      },
+      {
+        "tag": "DIV",
+        "className": "font-medium text-gov-text truncate",
+        "scrollWidth": 215,
+        "clientWidth": 160
+      },
+      {
+        "tag": "DIV",
+        "className": "text-[10px] text-gov-muted truncate mt-0.5",
+        "scrollWidth": 284,
+        "clientWidth": 160
+      },
+      {
+        "tag": "DIV",
+        "className": "font-medium text-gov-text truncate",
+        "scrollWidth": 295,
+        "clientWidth": 160
+      }
+    ]
+  }
+]

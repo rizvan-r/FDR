@@ -70,7 +70,6 @@ export const ReleaseDashboardPage: React.FC = () => {
             <span className="px-2.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200">
               Release & Settlement Governance
             </span>
-            <span className="text-xs text-slate-500 font-medium">Phase 8</span>
           </div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2.5">
             <FileCheck2 className="w-7 h-7 text-[#12345A]" />

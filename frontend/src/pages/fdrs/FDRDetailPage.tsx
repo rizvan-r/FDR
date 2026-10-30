@@ -596,8 +596,8 @@ export const FDRDetailPage: React.FC = () => {
       </div>
 
       {/* Tab Navigation */}
-      <div className="border-b border-gov-border">
-        <nav className="flex space-x-6">
+      <div className="border-b border-gov-border overflow-x-auto scrollbar-none">
+        <nav className="flex space-x-6 min-w-max">
           <button
             onClick={() => setActiveTab('overview')}
             className={`py-3 px-1 text-xs font-semibold border-b-2 transition-colors flex items-center gap-2 ${
@@ -1445,7 +1445,7 @@ export const FDRDetailPage: React.FC = () => {
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-xs font-bold uppercase tracking-wider text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
-                  Phase 5 Lineage
+                  Deposit Lineage
                 </span>
                 <span className="text-xs text-slate-500">
                   Directed Acyclic Graph (DAG) Heritage Chain

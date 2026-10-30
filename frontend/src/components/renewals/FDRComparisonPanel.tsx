@@ -252,7 +252,7 @@ export const FDRComparisonPanel: React.FC<FDRComparisonPanelProps> = ({
                 </span>
               </div>
               <div>
-                <span className="text-slate-500 block">Independent Trust Tier</span>
+                <span className="text-slate-500 block">Trust Tier</span>
                 <div className="mt-0.5 flex items-center gap-1.5">
                   <TrustTierBadge tier={replacementFdr.trust_tier} size="sm" />
                   {replacementFdr.trust_tier < 2 && (

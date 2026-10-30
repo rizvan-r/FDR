@@ -412,10 +412,10 @@ export const FDRListPage: React.FC = () => {
                 <th className="py-3 px-4">FDR Identifier & Bank</th>
                 <th className="py-3 px-4">Depositor Institution</th>
                 <th className="py-3 px-4">Lien Beneficiary</th>
-                <th className="py-3 px-4">Principal Amount</th>
+                <th className="py-3 px-4 text-right">Principal Amount</th>
                 <th className="py-3 px-4">Maturity / Tenor</th>
-                <th className="py-3 px-4">Trust Tier</th>
-                <th className="py-3 px-4">Status</th>
+                <th className="py-3 px-4 text-center">Trust Tier</th>
+                <th className="py-3 px-4 text-center">Status</th>
                 <th className="py-3 px-4 text-center">Docs</th>
                 <th className="py-3 px-4 text-right">Actions</th>
               </tr>
@@ -478,7 +478,7 @@ export const FDRListPage: React.FC = () => {
                       </td>
 
                       {/* Lien In Favour Of */}
-                      <td className="py-3 px-4 max-w-[200px]">
+                      <td className="py-3 px-4 w-48 max-w-[12rem] overflow-hidden">
                         <div className="font-medium text-gov-text truncate" title={fdr.lien_in_favour}>
                           {fdr.lien_in_favour}
                         </div>
@@ -490,7 +490,7 @@ export const FDRListPage: React.FC = () => {
                       </td>
 
                       {/* Principal Amount & Rate */}
-                      <td className="py-3 px-4">
+                      <td className="py-3 px-4 text-right">
                         <div className="font-bold text-gov-navy text-[13px]">
                           {formatCurrency(fdr.amount)}
                         </div>
@@ -521,12 +521,12 @@ export const FDRListPage: React.FC = () => {
                       </td>
 
                       {/* Trust Tier */}
-                      <td className="py-3 px-4 whitespace-nowrap">
+                      <td className="py-3 px-4 text-center whitespace-nowrap">
                         {getTierBadge(fdr.trust_tier, fdr.verification_status)}
                       </td>
 
                       {/* Status */}
-                      <td className="py-3 px-4 whitespace-nowrap">
+                      <td className="py-3 px-4 text-center whitespace-nowrap">
                         {getStatusBadge(fdr.lifecycle_status)}
                       </td>
 

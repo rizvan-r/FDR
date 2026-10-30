@@ -70,7 +70,7 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({ document }) =>
             <p className="font-mono text-[9px] text-gray-500 break-all">
               {document.finalized_pdf_hash || 'c8f43a90b1e428d0954b9f2913e6178a3d72e90f23a4b5c6d7e8f90123456789'}
             </p>
-            <p>Generated via Central FDR-Chain Governance Node (Phase 7)</p>
+            <p>Generated via Central FDR-Chain Governance Node</p>
           </div>
 
           {document.document_status === 'signed' && document.mock_signature ? (

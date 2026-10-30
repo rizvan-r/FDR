@@ -68,7 +68,6 @@ export const RefundManagementPage: React.FC = () => {
             <span className="px-2.5 py-0.5 rounded text-[10px] font-bold bg-teal-50 text-teal-800 border border-teal-200">
               Financial Treasury Ledger
             </span>
-            <span className="text-xs text-slate-500 font-medium">Phase 8</span>
           </div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2.5">
             <IndianRupee className="w-7 h-7 text-[#12345A]" />

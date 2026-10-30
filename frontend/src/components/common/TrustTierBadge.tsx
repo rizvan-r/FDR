@@ -179,7 +179,7 @@ export const TrustTierBadge: React.FC<TrustTierBadgeProps> = ({
 
               {/* Footer Notice */}
               <p className="text-[10px] text-gov-muted leading-normal">
-                Phase 3 Governance Rule: Trust tiers can only be upgraded through verified bank cryptographic attestations or secure officer tokens. Direct database mutations are strictly prohibited.
+                Governance Rule: Trust tiers can only be upgraded through verified bank cryptographic attestations or secure officer tokens. Direct database mutations are strictly prohibited.
               </p>
             </div>
 

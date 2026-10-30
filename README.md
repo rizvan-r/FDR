@@ -1,7 +1,7 @@
 # FDR-Chain — Institutional Fixed Deposit Receipt (FDR) Management Portal
 
 **Smart India Hackathon 2026**  
-**Phase 5 Release: Renewal Management, 6-Signal Advisory Matching & FDR Lineage Graph**
+**Phase 6 Release: Officer Dashboard, Priority Queue, Heuristic Scoring Engine & Supervisory Escalations**
 
 ---
 
@@ -14,10 +14,41 @@
 - **Phase 3**: Multi-Tier Trust Engine (Tier 1 Declared → Tier 2 Bank Confirmed → Tier 3 Digitally Signed), RFC 8785 Canonical JSON Serialization, Ed25519 Digital Signatures, 48-Hour Single-Use Verification Tokens with Snapshot Protection, Public Key Registry, and Mock Bank Testing Sandbox.
 - **Phase 4**: Continuous Heartbeat Surveillance, Configurable Cadence Policies, Autonomous Background Scheduler (APScheduler), Broken Lien Quarantine Protection, Retry & Timeout Escalation, Milestone Maturity Reminders, and Officer Regulatory Alert Desk.
 - **Phase 5**: Governed Renewal Management, 6-Signal Deterministic Candidate Matching Engine, Independent Replacement FDR Trust Tier $\ge 2$ Enforcement, Strict Directed Acyclic Graph (DAG) Lineage with Cycle Detection, and End-to-End Visual Provenance Explorer.
+- **Phase 6**: Role-Aware Officer Dashboard, Centralized Priority Queue, 9-Signal Non-Destructive Priority Calculation Engine, Idempotent Task Synchronization across Phases 3–5, Task Lifecycle State Machine, Assignment & Comment Trails, Supervisory Multi-Stage Escalations, Staff Workload Dashboard, and In-App Officer Notifications.
 
 ---
 
-## 🔄 Renewal Management & Lineage Graph (Phase 5)
+## 📋 Officer Operations & Unified Priority Queue (Phase 6)
+
+Phase 6 unifies operational review responsibilities across previous phases into a role-scoped, intelligent command center:
+
+```
+                    ┌─────────────────────────┐
+                    │    UPSTREAM MODULES     │
+                    │ (Phases 3, 4, 5 Events) │
+                    └────────────┬────────────┘
+                                 │ Idempotent Task Synchronization (dedup_key)
+                                 ▼
+                    ┌─────────────────────────┐
+                    │      OFFICER TASK       │
+                    │ Status: OPEN / IN_PROG  │
+                    └────────────┬────────────┘
+                                 │
+         ┌───────────────────────┼───────────────────────┐
+         │                       │                       │
+         ▼                       ▼                       ▼
+┌──────────────────┐    ┌──────────────────┐    ┌──────────────────┐
+│ PRIORITY ENGINE  │    │  COLLABORATION   │    │   ESCALATIONS    │
+│ 9-Signal Scoring │    │ Assignment Audit │    │ Multi-Tier SLA   │
+│ Tiers: Crit/High │    │ Internal Comments│    │ Ack & Resolution │
+└──────────────────┘    └──────────────────┘    └──────────────────┘
+```
+
+### Key Phase 6 Architectural Guarantees:
+1. **Dynamic Priority Scoring Invariant**: Scoring is an ordering heuristic that surfaces urgent matters without human latency. Priority scoring **never** executes financial state changes, lien releases, or renewal approvals.
+2. **Review vs Business Separation**: Completing an officer task records operational review completion. It **does not** automatically alter the status of the underlying FDR or renewal case.
+3. **Idempotent Synchronization**: Deduplication key `source_type:source_id:task_type` ensures zero duplicate tasks while safely updating scores as deadlines approach.
+4. **Supervisory Escalation Invariant**: Prevents duplicate active escalations at the same tier and mandates formal written justification to resolve.
 
 Phase 5 addresses deposit rollovers and replacements through a governed supervisory workflow:
 
@@ -147,6 +178,7 @@ Execute migrations sequentially in your [Supabase SQL Editor](https://supabase.c
 - Phase 3: `07_phase3_schema.sql`, `08_phase3_rls_policies.sql`, `09_phase3_seed_data.sql`
 - Phase 4: `10_phase4_schema.sql`, `11_phase4_rls_policies.sql`, `12_phase4_seed_data.sql`
 - Phase 5: `13_phase5_schema.sql`, `14_phase5_rls_policies.sql`, `15_phase5_seed_data.sql`
+- Phase 6: `16_phase6_schema.sql`, `17_phase6_rls_policies.sql`, `18_phase6_seed_data.sql`
 
 ### 2. Backend Gateway (FastAPI)
 ```powershell
@@ -173,39 +205,32 @@ npm.cmd run dev
 
 ---
 
-## 🧪 Comprehensive Automated Test Suites (51/51 Passed)
+## 🧪 Comprehensive Automated Test Suites (67/67 Passed)
 
-Execute all 51 automated unit and integration tests across Phase 2, Phase 3, Phase 4, and Phase 5 from PowerShell:
+Execute all 67 automated unit and integration tests across Phase 2, Phase 3, Phase 4, Phase 5, and Phase 6 from PowerShell:
 ```powershell
 cd backend
-python -m pytest test_phase2.py test_phase3.py test_phase4.py test_phase5.py -v
+python -m pytest test_phase2.py test_phase3.py test_phase4.py test_phase5.py test_phase6.py -v
 ```
 
 ### Test Coverage Highlights:
 - **Phase 2 Tests (7/7 Passed)**: Date order validation, Tier 1 immutability on creation, prohibited field update prevention, stats calculation, detail inspection.
 - **Phase 3 Tests (13/13 Passed)**: Tier 1 initial standing, Tier 2 single-use token lifecycle, duplicate request prevention, token consumption & replay protection, bank rejection, Tier 3 Ed25519 cryptographic signatures, tampered payload detection, corrupted signature rejection, unknown key rejection, nonce replay prevention, admin bank key registry CRUD.
 - **Phase 4 Tests (13/13 Passed)**: Heartbeat dashboard metrics, monitored registry status tabs, manual interim check dispatch, heartbeat policy administration CRUD, freshness audit elapsed threshold transition (`alive -> stale`), bank rejection transition to `broken`, state machine quarantine invariant, retry & timeout lifecycle, milestone maturity reminders, alert desk lifecycle.
-- **Phase 5 Tests (18/18 Passed)**:
-  - Renewal draft creation with auto-formatted case numbers (`REN-YYYY-XXXX`).
-  - Draft case editing and transition to `submitted`.
-  - Immutability enforcement on submitted/approved cases.
-  - Cross-institution reference rejection (HTTP 400).
-  - 6-signal candidate matching scoring & advisory guarantee verification.
-  - Evidence document upload and MIME type verification.
-  - Non-supervisory approval prevention (HTTP 403) and duplicate approval prevention (HTTP 400).
-  - Mandatory justification on case rejection.
-  - Recursive lineage DAG graph traversal (ancestors and descendants).
-  - Anti-reflexivity constraint (self-link prevention).
-  - Conflicting predecessor rejection (single predecessor constraint).
-  - Cycle detection and prevention ($A \to B \to C \to A$ rejected).
-  - Single-node graph handling for isolated FDRs.
-  - Renewal operations dashboard metrics aggregation.
+- **Phase 5 Tests (18/18 Passed)**: Renewal draft creation (`REN-YYYY-XXXX`), draft case editing, state immutability, cross-institution reference rejection, 6-signal candidate matching scoring & advisory guarantee verification, evidence upload and MIME type check, non-supervisory approval prevention, duplicate approval prevention, mandatory rejection justification, recursive DAG graph traversal, anti-reflexivity constraint, single predecessor invariant, cycle detection, isolated FDR handling, and dashboard metrics.
+- **Phase 6 Tests (16/16 Passed)**: Officer dashboard KPI aggregation, priority queue listing & dynamic multi-criteria filtering, full task detail hydration, 9-signal non-destructive priority scoring engine, idempotent task synchronization from Phases 3–5 with deduplication keying, task lifecycle state transitions (`open` $\to$ `in_progress` $\to$ `waiting` $\to$ `completed`), invariant separating review completion from underlying FDR approval, officer assignment and reassignment audit logging, invalid assignee rejection, collaborative comment threading, supervisory multi-stage escalation lifecycle (trigger $\to$ acknowledge $\to$ resolve with justification), officer notifications, staff workload metrics, admin queue policy CRUD, unauthorized policy update rejection, and cross-institution data isolation.
 
 ---
 
 ## 📚 Technical Documentation Index
 
 Detailed architectural and developer guides are available in the [`docs/`](file:///i:/Richu/Projects/SIH/FDR/docs) directory:
+- [Phase 6 Officer Dashboard Architecture](file:///i:/Richu/Projects/SIH/FDR/docs/PHASE_6_OFFICER_DASHBOARD.md)
+- [Phase 6 Priority Engine & Scoring Rules](file:///i:/Richu/Projects/SIH/FDR/docs/PHASE_6_PRIORITY_ENGINE.md)
+- [Phase 6 Task Lifecycle & Synchronization](file:///i:/Richu/Projects/SIH/FDR/docs/PHASE_6_TASK_MANAGEMENT.md)
+- [Phase 6 Supervisory Escalations & Workload](file:///i:/Richu/Projects/SIH/FDR/docs/PHASE_6_ESCALATION.md)
+- [Phase 6 REST API Specification](file:///i:/Richu/Projects/SIH/FDR/docs/PHASE_6_API.md)
+- [Phase 6 Test Execution & Quality Assurance Report](file:///i:/Richu/Projects/SIH/FDR/docs/PHASE_6_TESTING.md)
 - [Phase 5 Renewal Architecture](file:///i:/Richu/Projects/SIH/FDR/docs/PHASE_5_RENEWAL_ARCHITECTURE.md)
 - [Phase 5 Database Schema & RLS](file:///i:/Richu/Projects/SIH/FDR/docs/PHASE_5_DATABASE.md)
 - [Phase 5 6-Signal Matching Engine](file:///i:/Richu/Projects/SIH/FDR/docs/PHASE_5_MATCHING.md)

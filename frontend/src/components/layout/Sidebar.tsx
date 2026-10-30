@@ -19,6 +19,9 @@ import {
   Sliders,
   Clock,
   GitBranch,
+  ListOrdered,
+  CheckSquare,
+  Briefcase,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -211,22 +214,64 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             </nav>
           </div>
 
+          {/* Phase 6: Officer Desk & Priority Queue */}
+          <div>
+            <div className="px-3 mb-2 flex items-center justify-between text-[10px] font-bold tracking-wider text-gov-muted uppercase">
+              <span>Officer Operations</span>
+              <span className="px-1.5 py-0.2 rounded bg-blue-100 text-blue-800 text-[9px] font-semibold">
+                Phase 6 Live
+              </span>
+            </div>
+            <nav className="space-y-1">
+              <NavLink to="/officer/dashboard" className={navLinkClass} onClick={onClose}>
+                <CheckSquare className="w-4 h-4 text-blue-600" />
+                <span>Officer Desk</span>
+              </NavLink>
+
+              <NavLink to="/officer/queue" className={navLinkClass} onClick={onClose}>
+                <ListOrdered className="w-4 h-4 text-indigo-600" />
+                <span>Priority Queue</span>
+              </NavLink>
+
+              {(isAdmin || isBureau || isRegional) && (
+                <NavLink to="/officer/workload" className={navLinkClass} onClick={onClose}>
+                  <Briefcase className="w-4 h-4 text-amber-600" />
+                  <span>Workload Staffing</span>
+                </NavLink>
+              )}
+
+              {(isAdmin || isBureau || isRegional) && (
+                <NavLink to="/officer/escalations" className={navLinkClass} onClick={onClose}>
+                  <ShieldAlert className="w-4 h-4 text-rose-600" />
+                  <span>Escalation Command</span>
+                </NavLink>
+              )}
+
+              {isAdmin && (
+                <NavLink to="/officer/policies" className={navLinkClass} onClick={onClose}>
+                  <Sliders className="w-4 h-4 text-purple-600" />
+                  <span>Queue Policies</span>
+                </NavLink>
+              )}
+            </nav>
+          </div>
+
           {/* Future Modules Section (Strict Phase Boundary Visualization) */}
           <div className="pt-4 border-t border-gov-border">
             <div className="px-3 mb-2 flex items-center justify-between text-[10px] font-bold tracking-wider text-gov-muted uppercase">
               <span>Upcoming Capabilities</span>
               <span className="px-1.5 py-0.2 rounded bg-slate-100 text-slate-700 text-[9px] font-semibold">
-                Phase 6
+                Phase 7
               </span>
             </div>
             <div className="space-y-1 text-xs text-gray-400">
               <div className="flex items-center justify-between px-3.5 py-2 rounded-md hover:bg-gray-50 opacity-70 cursor-not-allowed">
                 <span className="flex items-center gap-2.5">
                   <Coins className="w-3.5 h-3.5" />
-                  <span>Lien Release & Settlement</span>
+                  <span>Legacy Migration & Ingestion</span>
                 </span>
                 <span className="text-[9px] bg-slate-100 text-slate-600 px-1 py-0.5 rounded border border-slate-200">
-                  Phase 6
+                  Phase 7
                 </span>
               </div>
 
@@ -236,7 +281,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                   <span>OCR & Document Intelligence</span>
                 </span>
                 <span className="text-[9px] bg-slate-100 text-slate-600 px-1 py-0.5 rounded border border-slate-200">
-                  Phase 6
+                  Phase 7
                 </span>
               </div>
             </div>

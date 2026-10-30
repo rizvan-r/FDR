@@ -27,6 +27,14 @@ import {
   FDRLineageGraph,
   MatchingResult,
   RenewalDashboardStats,
+  OfficerTask,
+  TaskAssignment,
+  TaskComment,
+  TaskEscalation,
+  OfficerNotification,
+  QueuePolicy,
+  OfficerWorkloadSummary,
+  OfficerDashboardStats,
 } from '../types';
 import {
   SEED_REGIONS,
@@ -46,6 +54,14 @@ import {
   SEED_FDR_LINEAGE,
   SEED_RENEWAL_EVIDENCE,
   SEED_RENEWAL_STATS,
+  SEED_OFFICER_TASKS,
+  SEED_TASK_ASSIGNMENTS,
+  SEED_TASK_COMMENTS,
+  SEED_TASK_ESCALATIONS,
+  SEED_OFFICER_NOTIFICATIONS,
+  SEED_QUEUE_POLICIES,
+  SEED_OFFICER_WORKLOAD,
+  SEED_OFFICER_DASHBOARD_STATS,
 } from './mockData';
 
 // Storage keys for local development persistence
@@ -63,6 +79,11 @@ const STORAGE_KEYS = {
   HEARTBEAT_CHECKS: 'fdr_dev_heartbeat_checks',
   FDR_ALERTS: 'fdr_dev_alerts',
   RENEWAL_CASES: 'fdr_dev_renewal_cases',
+  OFFICER_TASKS: 'fdr_dev_officer_tasks',
+  TASK_COMMENTS: 'fdr_dev_task_comments',
+  TASK_ESCALATIONS: 'fdr_dev_task_escalations',
+  OFFICER_NOTIFICATIONS: 'fdr_dev_officer_notifications',
+  QUEUE_POLICIES: 'fdr_dev_queue_policies',
   FDR_LINEAGE: 'fdr_dev_lineage',
   RENEWAL_EVIDENCE: 'fdr_dev_renewal_evidence',
 };
@@ -2374,5 +2395,525 @@ export async function fetchFDRLineage(fdrId: string): Promise<FDRLineageGraph> {
 export async function fetchFDRRenewalCases(fdrId: string): Promise<{ items: RenewalCase[]; total: number }> {
   return fetchRenewalCases({ search: fdrId });
 }
+
+// ==============================================================================
+// PHASE 6: OFFICER DASHBOARD & PRIORITY QUEUE API
+// ==============================================================================
+
+export async function fetchOfficerDashboardStats(): Promise<OfficerDashboardStats> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/officer/dashboard`, {
+      method: 'GET',
+      headers: { ...headers },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // fallback
+  }
+  return SEED_OFFICER_DASHBOARD_STATS;
+}
+
+export async function fetchOfficerTasks(params?: {
+  status?: string;
+  priority_level?: string;
+  assigned_to?: string;
+  task_type?: string;
+  search?: string;
+  my_tasks?: boolean;
+  unassigned_only?: boolean;
+  limit?: number;
+  offset?: number;
+}): Promise<OfficerTask[]> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const query = new URLSearchParams();
+    if (params?.status) query.set('status', params.status);
+    if (params?.priority_level) query.set('priority_level', params.priority_level);
+    if (params?.assigned_to) query.set('assigned_to', params.assigned_to);
+    if (params?.task_type) query.set('task_type', params.task_type);
+    if (params?.search) query.set('search', params.search);
+    if (params?.my_tasks) query.set('my_tasks', 'true');
+    if (params?.unassigned_only) query.set('unassigned_only', 'true');
+    if (params?.limit) query.set('limit', params.limit.toString());
+    if (params?.offset) query.set('offset', params.offset.toString());
+
+    const res = await fetch(`${apiUrl}/api/v1/officer/tasks?${query.toString()}`, {
+      method: 'GET',
+      headers: { ...headers },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // fallback
+  }
+
+  const tasks = getLocalOrInit(STORAGE_KEYS.OFFICER_TASKS, SEED_OFFICER_TASKS);
+  let filtered = [...tasks];
+
+  if (params?.status) {
+    filtered = filtered.filter((t) => t.task_status === params.status);
+  }
+  if (params?.priority_level) {
+    filtered = filtered.filter((t) => t.priority_level === params.priority_level);
+  }
+  if (params?.task_type) {
+    filtered = filtered.filter((t) => t.task_type === params.task_type);
+  }
+  if (params?.assigned_to) {
+    filtered = filtered.filter((t) => t.assigned_to === params.assigned_to);
+  }
+  if (params?.unassigned_only) {
+    filtered = filtered.filter((t) => !t.assigned_to);
+  }
+  if (params?.search) {
+    const q = params.search.toLowerCase();
+    filtered = filtered.filter(
+      (t) =>
+        t.title.toLowerCase().includes(q) ||
+        t.fdr_number?.toLowerCase().includes(q) ||
+        t.institution_name?.toLowerCase().includes(q)
+    );
+  }
+
+  filtered.sort((a, b) => b.priority_score - a.priority_score);
+  return filtered;
+}
+
+export async function fetchOfficerTaskById(id: string): Promise<OfficerTask> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/officer/tasks/${id}`, {
+      method: 'GET',
+      headers: { ...headers },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // fallback
+  }
+
+  const tasks = getLocalOrInit(STORAGE_KEYS.OFFICER_TASKS, SEED_OFFICER_TASKS);
+  const task = tasks.find((t) => t.id === id);
+  if (!task) {
+    throw new Error(`Task ${id} not found.`);
+  }
+
+  const comments = getLocalOrInit(STORAGE_KEYS.TASK_COMMENTS, SEED_TASK_COMMENTS).filter(
+    (c) => c.task_id === id
+  );
+  const escalations = getLocalOrInit(STORAGE_KEYS.TASK_ESCALATIONS, SEED_TASK_ESCALATIONS).filter(
+    (e) => e.task_id === id
+  );
+
+  return {
+    ...task,
+    comments,
+    escalations,
+    assignments: task.assignments || [],
+  };
+}
+
+export async function startOfficerTask(id: string, note?: string): Promise<OfficerTask> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/officer/tasks/${id}/start`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ note }),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // fallback
+  }
+
+  const tasks = getLocalOrInit(STORAGE_KEYS.OFFICER_TASKS, SEED_OFFICER_TASKS);
+  const task = tasks.find((t) => t.id === id);
+  if (task) {
+    task.task_status = 'in_progress';
+    task.started_at = new Date().toISOString();
+    task.updated_at = new Date().toISOString();
+    saveLocal(STORAGE_KEYS.OFFICER_TASKS, tasks);
+    return task;
+  }
+  throw new Error(`Task ${id} not found.`);
+}
+
+export async function waitOfficerTask(id: string, reason: string): Promise<OfficerTask> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/officer/tasks/${id}/wait`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason }),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // fallback
+  }
+
+  const tasks = getLocalOrInit(STORAGE_KEYS.OFFICER_TASKS, SEED_OFFICER_TASKS);
+  const task = tasks.find((t) => t.id === id);
+  if (task) {
+    task.task_status = 'waiting';
+    task.updated_at = new Date().toISOString();
+    saveLocal(STORAGE_KEYS.OFFICER_TASKS, tasks);
+    return task;
+  }
+  throw new Error(`Task ${id} not found.`);
+}
+
+export async function completeOfficerTask(id: string, completion_note: string): Promise<OfficerTask> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/officer/tasks/${id}/complete`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ completion_note }),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // fallback
+  }
+
+  const tasks = getLocalOrInit(STORAGE_KEYS.OFFICER_TASKS, SEED_OFFICER_TASKS);
+  const task = tasks.find((t) => t.id === id);
+  if (task) {
+    task.task_status = 'completed';
+    task.completed_at = new Date().toISOString();
+    task.completion_note = completion_note;
+    task.updated_at = new Date().toISOString();
+    saveLocal(STORAGE_KEYS.OFFICER_TASKS, tasks);
+    return task;
+  }
+  throw new Error(`Task ${id} not found.`);
+}
+
+export async function cancelOfficerTask(id: string, reason: string): Promise<OfficerTask> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/officer/tasks/${id}/cancel`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason }),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // fallback
+  }
+
+  const tasks = getLocalOrInit(STORAGE_KEYS.OFFICER_TASKS, SEED_OFFICER_TASKS);
+  const task = tasks.find((t) => t.id === id);
+  if (task) {
+    task.task_status = 'cancelled';
+    task.completion_note = `Cancelled: ${reason}`;
+    task.updated_at = new Date().toISOString();
+    saveLocal(STORAGE_KEYS.OFFICER_TASKS, tasks);
+    return task;
+  }
+  throw new Error(`Task ${id} not found.`);
+}
+
+export async function assignOfficerTask(
+  id: string,
+  assigned_to: string | null,
+  assignment_note?: string
+): Promise<OfficerTask> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/officer/tasks/${id}/assign`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ assigned_to, assignment_note }),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // fallback
+  }
+
+  const tasks = getLocalOrInit(STORAGE_KEYS.OFFICER_TASKS, SEED_OFFICER_TASKS);
+  const task = tasks.find((t) => t.id === id);
+  if (task) {
+    task.assigned_to = assigned_to || undefined;
+    task.assigned_to_name = assigned_to ? 'Assigned Officer' : undefined;
+    task.updated_at = new Date().toISOString();
+    saveLocal(STORAGE_KEYS.OFFICER_TASKS, tasks);
+    return task;
+  }
+  throw new Error(`Task ${id} not found.`);
+}
+
+export async function addOfficerTaskComment(id: string, comment_text: string): Promise<TaskComment> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/officer/tasks/${id}/comments`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ comment_text }),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // fallback
+  }
+
+  const comments = getLocalOrInit(STORAGE_KEYS.TASK_COMMENTS, SEED_TASK_COMMENTS);
+  const newComment: TaskComment = {
+    id: `comment-${Date.now()}`,
+    task_id: id,
+    user_id: 'usr-admin-01',
+    user_name: 'Dr. Rajeshwar Sharma',
+    user_role: 'system_admin',
+    comment_text,
+    created_at: new Date().toISOString(),
+  };
+  comments.unshift(newComment);
+  saveLocal(STORAGE_KEYS.TASK_COMMENTS, comments);
+  return newComment;
+}
+
+export async function escalateOfficerTask(
+  id: string,
+  payload: { reason: string; target_role?: string; target_user_id?: string }
+): Promise<TaskEscalation> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/officer/tasks/${id}/escalate`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // fallback
+  }
+
+  const escalations = getLocalOrInit(STORAGE_KEYS.TASK_ESCALATIONS, SEED_TASK_ESCALATIONS);
+  const newEsc: TaskEscalation = {
+    id: `esc-${Date.now()}`,
+    task_id: id,
+    escalation_level: 1,
+    escalated_from: 'usr-admin-01',
+    escalated_from_name: 'Dr. Rajeshwar Sharma',
+    escalated_to: payload.target_user_id || 'usr-bureau-01',
+    escalated_to_name: 'Bureau Chief (Regulation)',
+    escalated_to_role: payload.target_role || 'bureau_officer',
+    reason: payload.reason,
+    escalated_at: new Date().toISOString(),
+  };
+  escalations.unshift(newEsc);
+  saveLocal(STORAGE_KEYS.TASK_ESCALATIONS, escalations);
+  return newEsc;
+}
+
+export async function acknowledgeTaskEscalation(
+  id: string,
+  escId: string,
+  note?: string
+): Promise<TaskEscalation> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/officer/tasks/${id}/escalations/${escId}/acknowledge`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ note }),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // fallback
+  }
+
+  const escalations = getLocalOrInit(STORAGE_KEYS.TASK_ESCALATIONS, SEED_TASK_ESCALATIONS);
+  const esc = escalations.find((e) => e.id === escId);
+  if (esc) {
+    esc.acknowledged_at = new Date().toISOString();
+    esc.acknowledged_by = 'usr-admin-01';
+    saveLocal(STORAGE_KEYS.TASK_ESCALATIONS, escalations);
+    return esc;
+  }
+  throw new Error(`Escalation ${escId} not found.`);
+}
+
+export async function resolveTaskEscalation(
+  id: string,
+  escId: string,
+  resolution_note: string
+): Promise<TaskEscalation> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/officer/tasks/${id}/escalations/${escId}/resolve`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ resolution_note }),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // fallback
+  }
+
+  const escalations = getLocalOrInit(STORAGE_KEYS.TASK_ESCALATIONS, SEED_TASK_ESCALATIONS);
+  const esc = escalations.find((e) => e.id === escId);
+  if (esc) {
+    esc.resolved_at = new Date().toISOString();
+    esc.resolved_by = 'usr-admin-01';
+    esc.resolution_note = resolution_note;
+    saveLocal(STORAGE_KEYS.TASK_ESCALATIONS, escalations);
+    return esc;
+  }
+  throw new Error(`Escalation ${escId} not found.`);
+}
+
+export async function syncOfficerTasks(): Promise<{ status: string; created_count: number; updated_count: number; total_tasks: number }> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/officer/tasks/sync`, {
+      method: 'POST',
+      headers: { ...headers },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // fallback
+  }
+  return { status: 'success', created_count: 0, updated_count: 0, total_tasks: SEED_OFFICER_TASKS.length };
+}
+
+export async function fetchOfficerWorkload(): Promise<OfficerWorkloadSummary> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/officer/workload`, {
+      method: 'GET',
+      headers: { ...headers },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // fallback
+  }
+  return SEED_OFFICER_WORKLOAD;
+}
+
+export async function fetchOfficerNotifications(): Promise<OfficerNotification[]> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/officer/notifications`, {
+      method: 'GET',
+      headers: { ...headers },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // fallback
+  }
+  return getLocalOrInit(STORAGE_KEYS.OFFICER_NOTIFICATIONS, SEED_OFFICER_NOTIFICATIONS);
+}
+
+export async function markOfficerNotificationRead(id: string): Promise<OfficerNotification> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/officer/notifications/${id}/read`, {
+      method: 'PATCH',
+      headers: { ...headers },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // fallback
+  }
+
+  const notifs = getLocalOrInit(STORAGE_KEYS.OFFICER_NOTIFICATIONS, SEED_OFFICER_NOTIFICATIONS);
+  const n = notifs.find((item) => item.id === id);
+  if (n) {
+    n.read_at = new Date().toISOString();
+    saveLocal(STORAGE_KEYS.OFFICER_NOTIFICATIONS, notifs);
+    return n;
+  }
+  throw new Error(`Notification ${id} not found.`);
+}
+
+export async function fetchQueuePolicies(): Promise<QueuePolicy[]> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/officer/policies`, {
+      method: 'GET',
+      headers: { ...headers },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // fallback
+  }
+  return getLocalOrInit(STORAGE_KEYS.QUEUE_POLICIES, SEED_QUEUE_POLICIES);
+}
+
+export async function updateQueuePolicy(id: string, payload: Partial<QueuePolicy>): Promise<QueuePolicy> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/officer/policies/${id}`, {
+      method: 'PUT',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // fallback
+  }
+
+  const policies = getLocalOrInit(STORAGE_KEYS.QUEUE_POLICIES, SEED_QUEUE_POLICIES);
+  const pol = policies.find((p) => p.id === id);
+  if (pol) {
+    Object.assign(pol, payload, { updated_at: new Date().toISOString() });
+    saveLocal(STORAGE_KEYS.QUEUE_POLICIES, policies);
+    return pol;
+  }
+  throw new Error(`Policy ${id} not found.`);
+}
+
 
 

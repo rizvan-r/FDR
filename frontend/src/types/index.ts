@@ -615,3 +615,174 @@ export interface RenewalDashboardStats {
   recent_cases: RenewalCase[];
 }
 
+// ==============================================================================
+// PHASE 6: OFFICER DASHBOARD & PRIORITY QUEUE TYPES
+// ==============================================================================
+
+export type TaskPriorityLevel = 'critical' | 'high' | 'medium' | 'low';
+
+export type TaskStatus = 'open' | 'in_progress' | 'waiting' | 'completed' | 'cancelled';
+
+export type TaskType =
+  | 'broken_fdr_review'
+  | 'stale_heartbeat_review'
+  | 'unresponsive_heartbeat_review'
+  | 'pending_bank_verification'
+  | 'overdue_verification'
+  | 'renewal_approval'
+  | 'renewal_evidence_review'
+  | 'upcoming_maturity_follow_up'
+  | 'escalation_acknowledgement';
+
+export type TaskSourceType =
+  | 'fdr_alert'
+  | 'heartbeat_check'
+  | 'verification_request'
+  | 'renewal_case'
+  | 'fdr'
+  | 'escalation';
+
+export interface PriorityReason {
+  code: string;
+  points: number;
+  description: string;
+}
+
+export interface TaskAssignment {
+  id: string;
+  task_id: string;
+  assigned_to: string;
+  assigned_to_name?: string;
+  assigned_by: string;
+  assigned_by_name?: string;
+  assignment_note?: string;
+  assigned_at: string;
+  unassigned_at?: string;
+}
+
+export interface TaskComment {
+  id: string;
+  task_id: string;
+  user_id: string;
+  user_name?: string;
+  user_role?: string;
+  comment_text: string;
+  created_at: string;
+}
+
+export interface TaskEscalation {
+  id: string;
+  task_id: string;
+  escalation_level: number;
+  escalated_from?: string;
+  escalated_from_name?: string;
+  escalated_to?: string;
+  escalated_to_name?: string;
+  escalated_to_role?: string;
+  reason: string;
+  escalated_at: string;
+  acknowledged_at?: string;
+  acknowledged_by?: string;
+  resolved_at?: string;
+  resolved_by?: string;
+  resolution_note?: string;
+}
+
+export interface OfficerTask {
+  id: string;
+  task_type: TaskType;
+  source_type: TaskSourceType;
+  source_id: string;
+  fdr_id?: string;
+  fdr_number?: string;
+  title: string;
+  description?: string;
+  institution_id?: string;
+  institution_name?: string;
+  region_id?: string;
+  region_name?: string;
+  bank_id?: string;
+  bank_name?: string;
+  assigned_to?: string;
+  assigned_to_name?: string;
+  created_by?: string;
+  priority_score: number;
+  priority_level: TaskPriorityLevel;
+  priority_reasons: PriorityReason[];
+  task_status: TaskStatus;
+  due_at?: string;
+  started_at?: string;
+  completed_at?: string;
+  completion_note?: string;
+  created_at: string;
+  updated_at: string;
+  task_age_hours?: number;
+  is_overdue?: boolean;
+  is_escalated?: boolean;
+  assignments?: TaskAssignment[];
+  comments?: TaskComment[];
+  escalations?: TaskEscalation[];
+  source_data?: Record<string, any>;
+  fdr_summary?: Record<string, any>;
+}
+
+export interface OfficerNotification {
+  id: string;
+  recipient_user_id: string;
+  task_id?: string;
+  notification_type: string;
+  title: string;
+  message: string;
+  read_at?: string;
+  created_at: string;
+}
+
+export interface QueuePolicy {
+  id: string;
+  name: string;
+  is_active: boolean;
+  is_default: boolean;
+  weights: Record<string, number>;
+  thresholds: Record<string, number>;
+  deadline_rules: Record<string, any>;
+  escalation_rules: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OfficerWorkloadItem {
+  officer_id: string;
+  officer_name: string;
+  officer_role: string;
+  email: string;
+  assigned_tasks: number;
+  critical_tasks: number;
+  overdue_tasks: number;
+  completed_tasks: number;
+}
+
+export interface OfficerWorkloadSummary {
+  officers: OfficerWorkloadItem[];
+  total_assigned: number;
+  total_unassigned: number;
+}
+
+export interface OfficerDashboardStats {
+  open_tasks: number;
+  critical_tasks: number;
+  high_priority_tasks: number;
+  overdue_tasks: number;
+  awaiting_bank_response: number;
+  awaiting_officer_review: number;
+  completed_this_month: number;
+  average_processing_hours: number;
+  pending_escalations: number;
+  recent_activity: Array<{
+    time: string;
+    action: string;
+    user: string;
+    fdr: string;
+  }>;
+}
+
+

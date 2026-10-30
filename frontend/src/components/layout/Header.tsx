@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { UserRole } from '../../types';
 import { LogOut, User, Server, Menu, X, ChevronDown, Bell } from 'lucide-react';
 import { checkBackendHealth, fetchAlerts } from '../../lib/api';
+import { OfficerNotificationBell } from '../officer/OfficerNotificationBell';
 
 const ROLE_LABELS: Record<UserRole, { label: string; badgeClass: string }> = {
   system_admin: { label: 'System Administrator', badgeClass: 'bg-red-50 text-red-700 border-red-200' },
@@ -86,6 +87,9 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
                 {backendStatus === 'healthy' ? 'Online' : 'Standby / Local'}
               </span>
             </div>
+
+            {/* Officer Notifications Bell (Phase 6) */}
+            <OfficerNotificationBell />
 
             {/* Regulatory Alert Desk Bell Icon */}
             <Link

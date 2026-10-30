@@ -29,6 +29,14 @@ import { RenewalReviewPage } from './pages/renewals/RenewalReviewPage';
 import { RenewalApprovalQueuePage } from './pages/renewals/RenewalApprovalQueuePage';
 import { FDRLineagePage } from './pages/fdrs/FDRLineagePage';
 
+// Phase 6: Officer Dashboard & Priority Queue Pages
+import { OfficerDashboardPage } from './pages/officer/OfficerDashboardPage';
+import { PriorityQueuePage } from './pages/officer/PriorityQueuePage';
+import { OfficerTaskDetailsPage } from './pages/officer/OfficerTaskDetailsPage';
+import { OfficerWorkloadPage } from './pages/officer/OfficerWorkloadPage';
+import { EscalationCenterPage } from './pages/officer/EscalationCenterPage';
+import { QueuePolicyPage } from './pages/officer/QueuePolicyPage';
+
 // Main Pages
 import { DashboardOverviewPage } from './pages/dashboard/DashboardOverviewPage';
 import { FDRListPage } from './pages/fdrs/FDRListPage';
@@ -203,6 +211,35 @@ export const App: React.FC = () => {
                 }
               />
               <Route path="/renewals/:id" element={<RenewalReviewPage />} />
+
+              {/* Phase 6: Officer Operations & Priority Queue */}
+              <Route path="/officer/dashboard" element={<OfficerDashboardPage />} />
+              <Route path="/officer/queue" element={<PriorityQueuePage />} />
+              <Route path="/officer/tasks/:id" element={<OfficerTaskDetailsPage />} />
+              <Route
+                path="/officer/workload"
+                element={
+                  <RoleRoute allowedRoles={['system_admin', 'bureau_officer', 'regional_officer']}>
+                    <OfficerWorkloadPage />
+                  </RoleRoute>
+                }
+              />
+              <Route
+                path="/officer/escalations"
+                element={
+                  <RoleRoute allowedRoles={['system_admin', 'bureau_officer', 'regional_officer']}>
+                    <EscalationCenterPage />
+                  </RoleRoute>
+                }
+              />
+              <Route
+                path="/officer/policies"
+                element={
+                  <RoleRoute allowedRoles={['system_admin']}>
+                    <QueuePolicyPage />
+                  </RoleRoute>
+                }
+              />
 
               {/* Profile & Security */}
               <Route path="/profile" element={<ProfilePage />} />

@@ -38,6 +38,9 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
             detail="User account has been deactivated. Contact your administrator."
         )
 
+    if token_payload.get("role"):
+        user_profile["roles"] = [token_payload["role"]]
+
     return user_profile
 
 def require_roles(allowed_roles: List[str]) -> Callable:

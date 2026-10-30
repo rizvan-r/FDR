@@ -10,8 +10,14 @@ import {
   UserCheck,
   FileText,
   ShieldAlert,
+  ShieldCheck,
+  Key,
   Coins,
   Lock,
+  Activity,
+  Bell,
+  Sliders,
+  Clock,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -60,7 +66,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           {/* Main Navigation */}
           <div>
             <div className="px-3 mb-2 text-[10px] font-bold tracking-wider text-gov-muted uppercase">
-              Core Modules (Phase 1)
+              Dashboard & Vault
             </div>
             <nav className="space-y-1">
               <NavLink to="/dashboard" className={navLinkClass} onClick={onClose}>
@@ -68,6 +74,26 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 <span>Dashboard Overview</span>
               </NavLink>
 
+              <NavLink to="/fdrs" className={navLinkClass} onClick={onClose}>
+                <FileText className="w-4 h-4" />
+                <span>FDR Repository</span>
+              </NavLink>
+
+              {(isAdmin || isInstUser) && (
+                <NavLink to="/fdrs/new" className={navLinkClass} onClick={onClose}>
+                  <Coins className="w-4 h-4" />
+                  <span>Register New FDR</span>
+                </NavLink>
+              )}
+            </nav>
+          </div>
+
+          {/* Institutional Infrastructure (Phase 1) */}
+          <div>
+            <div className="px-3 mb-2 text-[10px] font-bold tracking-wider text-gov-muted uppercase">
+              Entity Masters
+            </div>
+            <nav className="space-y-1">
               {canSeeInstitutions && (
                 <NavLink to="/institutions" className={navLinkClass} onClick={onClose}>
                   <Building2 className="w-4 h-4" />
@@ -103,52 +129,85 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             </nav>
           </div>
 
+          {/* Phase 3: Bank Verification & Trust Network */}
+          <div>
+            <div className="px-3 mb-2 text-[10px] font-bold tracking-wider text-gov-muted uppercase">
+              Trust & Verification
+            </div>
+            <nav className="space-y-1">
+              <NavLink to="/bank" className={navLinkClass} onClick={onClose}>
+                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                <span>Mock Bank Portal</span>
+              </NavLink>
+
+              {isAdmin && (
+                <NavLink to="/admin/bank-keys" className={navLinkClass} onClick={onClose}>
+                  <Key className="w-4 h-4 text-blue-600" />
+                  <span>Public Key Registry</span>
+                </NavLink>
+              )}
+            </nav>
+          </div>
+
+          {/* Phase 4: Heartbeat Surveillance & Alert Desk */}
+          <div>
+            <div className="px-3 mb-2 flex items-center justify-between text-[10px] font-bold tracking-wider text-gov-muted uppercase">
+              <span>Surveillance & Alerts</span>
+              <span className="px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 text-[9px] font-semibold">
+                Phase 4 Live
+              </span>
+            </div>
+            <nav className="space-y-1">
+              <NavLink to="/heartbeat" className={navLinkClass} onClick={onClose}>
+                <Activity className="w-4 h-4 text-emerald-600" />
+                <span>Heartbeat Surveillance</span>
+              </NavLink>
+
+              <NavLink to="/heartbeat/monitoring" className={navLinkClass} onClick={onClose}>
+                <Clock className="w-4 h-4 text-blue-600" />
+                <span>Monitored Deposits</span>
+              </NavLink>
+
+              <NavLink to="/alerts" className={navLinkClass} onClick={onClose}>
+                <Bell className="w-4 h-4 text-amber-600" />
+                <span>Regulatory Alert Desk</span>
+              </NavLink>
+
+              {isAdmin && (
+                <NavLink to="/admin/heartbeat-policies" className={navLinkClass} onClick={onClose}>
+                  <Sliders className="w-4 h-4 text-purple-600" />
+                  <span>Heartbeat Policies</span>
+                </NavLink>
+              )}
+            </nav>
+          </div>
+
           {/* Future Modules Section (Strict Phase Boundary Visualization) */}
           <div className="pt-4 border-t border-gov-border">
             <div className="px-3 mb-2 flex items-center justify-between text-[10px] font-bold tracking-wider text-gov-muted uppercase">
-              <span>Upcoming Modules</span>
-              <span className="px-1.5 py-0.2 rounded bg-gray-200 text-gray-700 text-[9px]">
-                Future
+              <span>Upcoming Capabilities</span>
+              <span className="px-1.5 py-0.2 rounded bg-purple-100 text-purple-800 text-[9px] font-semibold">
+                Phase 5
               </span>
             </div>
             <div className="space-y-1 text-xs text-gray-400">
               <div className="flex items-center justify-between px-3.5 py-2 rounded-md hover:bg-gray-50 opacity-70 cursor-not-allowed">
                 <span className="flex items-center gap-2.5">
-                  <FileText className="w-3.5 h-3.5" />
-                  <span>FDR E-Registration</span>
+                  <Coins className="w-3.5 h-3.5" />
+                  <span>Lien Release & Settlement</span>
                 </span>
-                <span className="text-[9px] bg-amber-50 text-amber-700 px-1 py-0.5 rounded border border-amber-200">
-                  Phase 2
+                <span className="text-[9px] bg-purple-50 text-purple-700 px-1 py-0.5 rounded border border-purple-200">
+                  Phase 5
                 </span>
               </div>
 
               <div className="flex items-center justify-between px-3.5 py-2 rounded-md hover:bg-gray-50 opacity-70 cursor-not-allowed">
                 <span className="flex items-center gap-2.5">
                   <Lock className="w-3.5 h-3.5" />
-                  <span>Bank E-Verification</span>
+                  <span>OCR & Document Intelligence</span>
                 </span>
-                <span className="text-[9px] bg-amber-50 text-amber-700 px-1 py-0.5 rounded border border-amber-200">
-                  Phase 2
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between px-3.5 py-2 rounded-md hover:bg-gray-50 opacity-70 cursor-not-allowed">
-                <span className="flex items-center gap-2.5">
-                  <ShieldAlert className="w-3.5 h-3.5" />
-                  <span>Lien Monitoring</span>
-                </span>
-                <span className="text-[9px] bg-amber-50 text-amber-700 px-1 py-0.5 rounded border border-amber-200">
-                  Phase 2
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between px-3.5 py-2 rounded-md hover:bg-gray-50 opacity-70 cursor-not-allowed">
-                <span className="flex items-center gap-2.5">
-                  <Coins className="w-3.5 h-3.5" />
-                  <span>Release & Refund</span>
-                </span>
-                <span className="text-[9px] bg-blue-50 text-blue-700 px-1 py-0.5 rounded border border-blue-200">
-                  Phase 3
+                <span className="text-[9px] bg-purple-50 text-purple-700 px-1 py-0.5 rounded border border-purple-200">
+                  Phase 5
                 </span>
               </div>
             </div>

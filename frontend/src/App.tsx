@@ -11,8 +11,22 @@ import { LoginPage } from './pages/auth/LoginPage';
 import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage';
 import { ResetPasswordPage } from './pages/auth/ResetPasswordPage';
 
+// Phase 3: Bank Verification & Crypto Pages
+import { BankVerificationPage } from './pages/bank/BankVerificationPage';
+import { MockBankPortalPage } from './pages/bank/MockBankPortalPage';
+import { BankKeysPage } from './pages/admin/BankKeysPage';
+
+// Phase 4: Heartbeat Monitoring & Surveillance Pages
+import { HeartbeatDashboardPage } from './pages/heartbeat/HeartbeatDashboardPage';
+import { HeartbeatMonitoringPage } from './pages/heartbeat/HeartbeatMonitoringPage';
+import { AlertCenterPage } from './pages/heartbeat/AlertCenterPage';
+import { HeartbeatPolicyPage } from './pages/admin/HeartbeatPolicyPage';
+
 // Main Pages
 import { DashboardOverviewPage } from './pages/dashboard/DashboardOverviewPage';
+import { FDRListPage } from './pages/fdrs/FDRListPage';
+import { FDRRegisterPage } from './pages/fdrs/FDRRegisterPage';
+import { FDRDetailPage } from './pages/fdrs/FDRDetailPage';
 import { InstitutionsListPage } from './pages/institutions/InstitutionsListPage';
 import { InstitutionDetailPage } from './pages/institutions/InstitutionDetailPage';
 import { RegionsListPage } from './pages/regions/RegionsListPage';
@@ -45,6 +59,9 @@ export const App: React.FC = () => {
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
 
+            {/* Phase 3: Public Bank Verification Route (Single-use token credential) */}
+            <Route path="/bank/verify/:token" element={<BankVerificationPage />} />
+
             {/* Protected Routes (Formal Dashboard Shell) */}
             <Route
               element={
@@ -55,6 +72,18 @@ export const App: React.FC = () => {
             >
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<DashboardOverviewPage />} />
+
+              {/* Phase 2: FDR Repository & Registration */}
+              <Route path="/fdrs" element={<FDRListPage />} />
+              <Route
+                path="/fdrs/new"
+                element={
+                  <RoleRoute allowedRoles={['institution_user', 'system_admin']}>
+                    <FDRRegisterPage />
+                  </RoleRoute>
+                }
+              />
+              <Route path="/fdrs/:id" element={<FDRDetailPage />} />
 
               {/* Institutions Master */}
               <Route
@@ -110,6 +139,32 @@ export const App: React.FC = () => {
                 element={
                   <RoleRoute allowedRoles={['system_admin']}>
                     <UsersListPage />
+                  </RoleRoute>
+                }
+              />
+
+              {/* Phase 3: Mock Bank Portal (Verification & Digital Signing Workbench) */}
+              <Route path="/bank" element={<MockBankPortalPage />} />
+
+              {/* Phase 3: Bank Key Registry Management (Admin Only) */}
+              <Route
+                path="/admin/bank-keys"
+                element={
+                  <RoleRoute allowedRoles={['system_admin']}>
+                    <BankKeysPage />
+                  </RoleRoute>
+                }
+              />
+
+              {/* Phase 4: Heartbeat Surveillance & Alert Desk */}
+              <Route path="/heartbeat" element={<HeartbeatDashboardPage />} />
+              <Route path="/heartbeat/monitoring" element={<HeartbeatMonitoringPage />} />
+              <Route path="/alerts" element={<AlertCenterPage />} />
+              <Route
+                path="/admin/heartbeat-policies"
+                element={
+                  <RoleRoute allowedRoles={['system_admin']}>
+                    <HeartbeatPolicyPage />
                   </RoleRoute>
                 }
               />

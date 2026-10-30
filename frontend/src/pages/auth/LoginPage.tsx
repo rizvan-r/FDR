@@ -47,6 +47,11 @@ export const LoginPage: React.FC = () => {
     }
   };
 
+  const handleInstantDemoLogin = (role: UserRole) => {
+    switchDemoRole(role);
+    navigate(from, { replace: true });
+  };
+
   return (
     <div className="min-h-screen bg-gov-bg flex flex-col justify-between">
       {/* Top National Header Bar */}
@@ -192,67 +197,91 @@ export const LoginPage: React.FC = () => {
             </form>
 
             {/* SIH 2026 Test & Evaluation Helper Panel */}
-            <div className="bg-gray-50 border-t border-gov-border p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-gov-muted flex items-center gap-1">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-gov-blue" />
-                  Quick Role Fill for SIH Evaluators (Phase 1 Testing)
+            <div className="bg-gray-50 border-t border-gov-border p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-gov-navy flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Evaluation Personas (Click to Instant Login)</span>
                 </span>
+                <span className="text-[10px] text-gov-muted">Zero password setup required</span>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 text-[11px]">
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px]">
                 <button
                   type="button"
-                  onClick={() => handleQuickRoleFill('system_admin')}
-                  className="p-1.5 bg-white border border-gov-border rounded hover:border-gov-navy text-left truncate transition"
+                  onClick={() => handleInstantDemoLogin('system_admin')}
+                  className="p-2 bg-white border border-gov-border rounded hover:border-red-600 hover:shadow-xs text-left transition group"
                 >
-                  <span className="font-semibold text-red-700 block">System Admin</span>
-                  <span className="text-[9px] text-gray-500 truncate block">admin@fdrchain.gov.in</span>
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-red-700 block">System Admin</span>
+                    <span className="text-[9px] text-gray-400 group-hover:text-red-700 font-semibold">Login →</span>
+                  </div>
+                  <span className="text-[9px] text-gray-500 truncate block mt-0.5">admin@fdrchain.gov.in</span>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => handleQuickRoleFill('bureau_officer')}
-                  className="p-1.5 bg-white border border-gov-border rounded hover:border-gov-navy text-left truncate transition"
+                  onClick={() => handleInstantDemoLogin('bureau_officer')}
+                  className="p-2 bg-white border border-gov-border rounded hover:border-emerald-600 hover:shadow-xs text-left transition group"
                 >
-                  <span className="font-semibold text-emerald-700 block">Bureau Officer</span>
-                  <span className="text-[9px] text-gray-500 truncate block">bureau.officer@...</span>
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-emerald-700 block">Bureau Officer</span>
+                    <span className="text-[9px] text-gray-400 group-hover:text-emerald-700 font-semibold">Login →</span>
+                  </div>
+                  <span className="text-[9px] text-gray-500 truncate block mt-0.5">bureau.officer@...</span>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => handleQuickRoleFill('finance_officer')}
-                  className="p-1.5 bg-white border border-gov-border rounded hover:border-gov-navy text-left truncate transition"
+                  onClick={() => handleInstantDemoLogin('finance_officer')}
+                  className="p-2 bg-white border border-gov-border rounded hover:border-amber-600 hover:shadow-xs text-left transition group"
                 >
-                  <span className="font-semibold text-amber-700 block">Finance Officer</span>
-                  <span className="text-[9px] text-gray-500 truncate block">finance.officer@...</span>
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-amber-700 block">Finance Officer</span>
+                    <span className="text-[9px] text-gray-400 group-hover:text-amber-700 font-semibold">Login →</span>
+                  </div>
+                  <span className="text-[9px] text-gray-500 truncate block mt-0.5">finance.officer@...</span>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => handleQuickRoleFill('regional_officer')}
-                  className="p-1.5 bg-white border border-gov-border rounded hover:border-gov-navy text-left truncate transition"
+                  onClick={() => handleInstantDemoLogin('regional_officer')}
+                  className="p-2 bg-white border border-gov-border rounded hover:border-blue-600 hover:shadow-xs text-left transition group"
                 >
-                  <span className="font-semibold text-blue-700 block">Regional Officer</span>
-                  <span className="text-[9px] text-gray-500 truncate block">regional.officer.nr@...</span>
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-blue-700 block">Regional Officer</span>
+                    <span className="text-[9px] text-gray-400 group-hover:text-blue-700 font-semibold">Login →</span>
+                  </div>
+                  <span className="text-[9px] text-gray-500 truncate block mt-0.5">regional.officer.nr@...</span>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => handleQuickRoleFill('bank_nodal_officer')}
-                  className="p-1.5 bg-white border border-gov-border rounded hover:border-gov-navy text-left truncate transition"
+                  onClick={() => handleInstantDemoLogin('bank_nodal_officer')}
+                  className="p-2 bg-white border border-gov-border rounded hover:border-indigo-600 hover:shadow-xs text-left transition group"
                 >
-                  <span className="font-semibold text-indigo-700 block">Bank Nodal</span>
-                  <span className="text-[9px] text-gray-500 truncate block">nodal.sbi@sbi.co.in</span>
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-indigo-700 block">Bank Nodal</span>
+                    <span className="text-[9px] text-gray-400 group-hover:text-indigo-700 font-semibold">Login →</span>
+                  </div>
+                  <span className="text-[9px] text-gray-500 truncate block mt-0.5">nodal.sbi@sbi.co.in</span>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => handleQuickRoleFill('institution_user')}
-                  className="p-1.5 bg-white border border-gov-border rounded hover:border-gov-navy text-left truncate transition"
+                  onClick={() => handleInstantDemoLogin('institution_user')}
+                  className="p-2 bg-white border border-gov-border rounded hover:border-purple-600 hover:shadow-xs text-left transition group"
                 >
-                  <span className="font-semibold text-purple-700 block">Institution User</span>
-                  <span className="text-[9px] text-gray-500 truncate block">deposits.officer@nhai...</span>
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-purple-700 block">Institution User</span>
+                    <span className="text-[9px] text-gray-400 group-hover:text-purple-700 font-semibold">Login →</span>
+                  </div>
+                  <span className="text-[9px] text-gray-500 truncate block mt-0.5">deposits.officer@nhai...</span>
                 </button>
+              </div>
+
+              <div className="text-[10px] text-gov-muted text-center pt-1">
+                Tip: You can also type/paste any of the above emails with password <code className="bg-gray-200 px-1 py-0.5 rounded text-gov-navy font-semibold">Admin@FDR2026#</code>.
               </div>
             </div>
           </div>

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { UserRole } from '../../types';
-import { LogOut, User, Server, Menu, X, ChevronDown } from 'lucide-react';
-import { checkBackendHealth } from '../../lib/api';
+import { LogOut, User, Server, Menu, X, ChevronDown, Bell } from 'lucide-react';
+import { checkBackendHealth, fetchAlerts } from '../../lib/api';
 
 const ROLE_LABELS: Record<UserRole, { label: string; badgeClass: string }> = {
   system_admin: { label: 'System Administrator', badgeClass: 'bg-red-50 text-red-700 border-red-200' },
@@ -22,6 +23,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
   const { user, activeRole, switchDemoRole, signOut } = useAuth();
   const [backendStatus, setBackendStatus] = useState<'checking' | 'healthy' | 'offline'>('checking');
   const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
+  const [unreadAlertCount, setUnreadAlertCount] = useState<number>(0);
 
   useEffect(() => {
     checkBackendHealth().then((res) => {
@@ -31,6 +33,12 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
         setBackendStatus('offline');
       }
     });
+
+    fetchAlerts({ is_resolved: false })
+      .then((res) => {
+        setUnreadAlertCount(res.unread_count || 0);
+      })
+      .catch(() => {});
   }, []);
 
   const currentRoleInfo = activeRole ? ROLE_LABELS[activeRole] : null;
@@ -78,6 +86,20 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
                 {backendStatus === 'healthy' ? 'Online' : 'Standby / Local'}
               </span>
             </div>
+
+            {/* Regulatory Alert Desk Bell Icon */}
+            <Link
+              to="/alerts"
+              className="relative p-2 rounded-md text-gov-navy hover:bg-gov-bg border border-gov-border transition-colors shadow-xs"
+              title="Regulatory Surveillance Alert Desk"
+            >
+              <Bell className="w-4 h-4 text-slate-700" />
+              {unreadAlertCount > 0 && (
+                <span className="absolute -top-1 -right-1 px-1.5 py-0.2 min-w-[18px] text-[10px] font-bold bg-rose-600 text-white rounded-full flex items-center justify-center animate-pulse">
+                  {unreadAlertCount}
+                </span>
+              )}
+            </Link>
 
             {/* Role Switcher (Crucial for SIH 2026 Evaluation across the 6 roles) */}
             <div className="relative">

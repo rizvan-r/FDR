@@ -10,7 +10,8 @@ from app.schemas.fdr import (
     FDRListResponse,
     FDRSummaryStats,
     DocumentResponse,
-    FDREventResponse
+    FDREventResponse,
+    AuditChainVerificationResponse
 )
 from app.services.fdr_service import fdr_service
 
@@ -158,3 +159,14 @@ async def list_fdr_events(
     """
     fdr = fdr_service.get_fdr_by_id(fdr_id, current_user)
     return fdr.get("events", [])
+
+@router.get("/fdrs/{fdr_id}/audit-chain", response_model=AuditChainVerificationResponse)
+async def verify_fdr_audit_chain(
+    fdr_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Cryptographically verifies the SHA-256 hash-chain of all immutable audit events for the FDR.
+    """
+    return fdr_service.verify_audit_chain(fdr_id, current_user)
+

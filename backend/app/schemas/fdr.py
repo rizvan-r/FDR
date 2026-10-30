@@ -35,6 +35,17 @@ class FDREventResponse(BaseModel):
     description: str
     metadata: Dict[str, Any] = {}
     created_at: datetime
+    prev_event_hash: Optional[str] = None
+    event_hash: Optional[str] = None
+
+class AuditChainVerificationResponse(BaseModel):
+    fdr_id: IdType
+    is_valid: bool
+    events_count: int
+    genesis_hash: str
+    latest_hash: Optional[str] = None
+    error_message: Optional[str] = None
+    verified_at: datetime
 
 class FDRBase(BaseModel):
     bank_id: IdType
@@ -62,6 +73,11 @@ class FDRUpdateRequest(BaseModel):
     interest_rate: Optional[Decimal] = Field(None, ge=0, le=100)
     lien_in_favour: Optional[str] = None
     remarks: Optional[str] = None
+    trust_tier: Optional[int] = None
+    verification_status: Optional[str] = None
+    lifecycle_status: Optional[str] = None
+    institution_id: Optional[IdType] = None
+    created_by: Optional[IdType] = None
 
 class FDRResponse(FDRBase):
     id: IdType

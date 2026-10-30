@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MigrationRowItem } from '../../types';
 import { X, Check, Trash2, Edit3, AlertTriangle, ShieldCheck } from 'lucide-react';
 
@@ -19,15 +19,26 @@ export const RowReviewModal: React.FC<RowReviewModalProps> = ({
   onClose,
   onSubmitReview,
 }) => {
-  if (!isOpen) return null;
-
-  const [fdrNumber, setFdrNumber] = useState(row.normalized_data?.fdr_number || '');
-  const [amount, setAmount] = useState<string>(String(row.normalized_data?.amount || ''));
-  const [issueDate, setIssueDate] = useState(row.normalized_data?.issue_date || '');
-  const [maturityDate, setMaturityDate] = useState(row.normalized_data?.maturity_date || '');
+  const [fdrNumber, setFdrNumber] = useState(row?.normalized_data?.fdr_number || '');
+  const [amount, setAmount] = useState<string>(String(row?.normalized_data?.amount || ''));
+  const [issueDate, setIssueDate] = useState(row?.normalized_data?.issue_date || '');
+  const [maturityDate, setMaturityDate] = useState(row?.normalized_data?.maturity_date || '');
   const [reviewNote, setReviewNote] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [actionType, setActionType] = useState<'correct' | 'approve' | 'exclude'>('correct');
+
+  useEffect(() => {
+    if (row?.normalized_data) {
+      setFdrNumber(row.normalized_data.fdr_number || '');
+      setAmount(String(row.normalized_data.amount || ''));
+      setIssueDate(row.normalized_data.issue_date || '');
+      setMaturityDate(row.normalized_data.maturity_date || '');
+      setReviewNote('');
+      setActionType('correct');
+    }
+  }, [row]);
+
+  if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

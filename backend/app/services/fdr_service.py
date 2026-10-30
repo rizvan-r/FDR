@@ -7,6 +7,7 @@ from datetime import datetime, date, timedelta, timezone
 from decimal import Decimal
 from fastapi import HTTPException, UploadFile, status
 from app.services.supabase_admin import supabase_admin
+from app.services.audit_chain_service import audit_chain_service, GENESIS_HASH
 from app.config import settings
 
 logger = logging.getLogger("fdr_chain.fdr_service")
@@ -223,9 +224,34 @@ LOCAL_FDR_STORE: List[Dict[str, Any]] = [
     }
 ]
 
+# Initialize cryptographic SHA-256 hash chains for all seed FDRs
+for _fdr in LOCAL_FDR_STORE:
+    if "events" in _fdr and _fdr["events"]:
+        _fdr["events"].sort(key=lambda e: e.get("created_at") or datetime.min.replace(tzinfo=timezone.utc))
+        audit_chain_service.chain_events(_fdr["events"])
+        _fdr["events"].reverse()
+
 class FDRService:
     ALLOWED_MIME_TYPES = ["application/pdf", "image/jpeg", "image/png"]
     MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024 # 10 MB
+
+    def verify_audit_chain(self, fdr_id: str, current_user: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Validates the SHA-256 hash chain across all chronological audit events for the FDR.
+        """
+        fdr = self.get_fdr_by_id(fdr_id, current_user)
+        events = fdr.get("events", [])
+        chrono_events = sorted(events, key=lambda e: e.get("created_at") or datetime.min.replace(tzinfo=timezone.utc))
+        is_valid, err_msg, count = audit_chain_service.verify_chain(chrono_events)
+        return {
+            "fdr_id": fdr_id,
+            "is_valid": is_valid,
+            "events_count": count,
+            "genesis_hash": GENESIS_HASH,
+            "latest_hash": chrono_events[-1].get("event_hash") if chrono_events else None,
+            "error_message": err_msg,
+            "verified_at": datetime.now(timezone.utc)
+        }
 
     def get_fdrs(
         self,
@@ -393,8 +419,9 @@ class FDRService:
                 detail="Maturity date must be strictly after the issue date."
             )
 
+        new_id = f"fdr-{uuid4().hex[:8]}"
         new_fdr = {
-            "id": f"fdr-{uuid4().hex[:8]}",
+            "id": new_id,
             "institution_id": inst_id,
             "bank_id": str(data["bank_id"]),
             "branch_id": str(data["branch_id"]),
@@ -418,7 +445,7 @@ class FDRService:
             "events": [
                 {
                     "id": f"evt-{uuid4().hex[:8]}",
-                    "fdr_id": f"fdr-{uuid4().hex[:8]}",
+                    "fdr_id": new_id,
                     "institution_id": inst_id,
                     "actor_id": current_user.get("id"),
                     "actor_name": current_user.get("full_name", "Officer"),
@@ -434,6 +461,8 @@ class FDRService:
                 }
             ]
         }
+
+        audit_chain_service.chain_events(new_fdr["events"])
 
         # Check duplicate fdr_number for bank
         for f in LOCAL_FDR_STORE:
@@ -490,19 +519,15 @@ class FDRService:
 
         fdr["updated_at"] = datetime.now(timezone.utc)
 
-        # Log event
-        fdr.setdefault("events", []).insert(0, {
-            "id": f"evt-{uuid4().hex[:8]}",
-            "fdr_id": fdr_id,
-            "institution_id": fdr["institution_id"],
-            "actor_id": current_user.get("id"),
-            "actor_name": current_user.get("full_name", "Officer"),
-            "actor_email": current_user.get("email"),
-            "event_type": "fdr_updated",
-            "description": f"FDR record modified by {current_user.get('full_name', 'Officer')}.",
-            "metadata": {"updated_fields": list(updates.keys())},
-            "created_at": datetime.now(timezone.utc)
-        })
+        # Log event with SHA-256 hash chaining
+        self.append_fdr_event(
+            fdr_id=fdr_id,
+            institution_id=fdr["institution_id"],
+            actor_profile=current_user,
+            event_type="fdr_updated",
+            description=f"FDR record modified by {current_user.get('full_name', 'Officer')}.",
+            metadata={"updated_fields": list(updates.keys())}
+        )
 
         return fdr
 
@@ -561,19 +586,15 @@ class FDRService:
 
         fdr.setdefault("documents", []).append(doc_record)
 
-        # 4. Log event
-        fdr.setdefault("events", []).insert(0, {
-            "id": f"evt-{uuid4().hex[:8]}",
-            "fdr_id": fdr_id,
-            "institution_id": fdr["institution_id"],
-            "actor_id": current_user.get("id"),
-            "actor_name": current_user.get("full_name", "Officer"),
-            "actor_email": current_user.get("email"),
-            "event_type": "document_uploaded",
-            "description": f"Document '{file.filename}' uploaded ({document_type}). SHA-256: {sha256[:12]}...",
-            "metadata": {"filename": file.filename, "checksum": sha256, "size_bytes": file_size},
-            "created_at": datetime.now(timezone.utc)
-        })
+        # 4. Log event with SHA-256 hash chaining
+        self.append_fdr_event(
+            fdr_id=fdr_id,
+            institution_id=fdr["institution_id"],
+            actor_profile=current_user,
+            event_type="document_uploaded",
+            description=f"Document '{file.filename}' uploaded ({document_type}). SHA-256: {sha256[:12]}...",
+            metadata={"filename": file.filename, "checksum": sha256, "size_bytes": file_size}
+        )
 
         return doc_record
 
@@ -621,7 +642,19 @@ class FDRService:
         description: str,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
-        """Appends an immutable audit event to the FDR history."""
+        """Appends an immutable audit event to the FDR history with SHA-256 hash chaining."""
+        target_fdr = None
+        for f in LOCAL_FDR_STORE:
+            if str(f.get("id")) == str(fdr_id):
+                target_fdr = f
+                break
+
+        prev_hash = GENESIS_HASH
+        if target_fdr and target_fdr.get("events"):
+            chrono = sorted(target_fdr["events"], key=lambda e: e.get("created_at") or datetime.min.replace(tzinfo=timezone.utc))
+            prev_hash = chrono[-1].get("event_hash") or GENESIS_HASH
+
+        now = datetime.now(timezone.utc)
         evt = {
             "id": f"evt-{uuid4().hex[:12]}",
             "fdr_id": str(fdr_id),
@@ -632,12 +665,12 @@ class FDRService:
             "event_type": event_type,
             "description": description,
             "metadata": metadata or {},
-            "created_at": datetime.now(timezone.utc),
+            "created_at": now,
+            "prev_event_hash": prev_hash,
         }
-        for f in LOCAL_FDR_STORE:
-            if str(f.get("id")) == str(fdr_id):
-                f.setdefault("events", []).insert(0, evt)
-                break
+        evt["event_hash"] = audit_chain_service.compute_event_hash(prev_hash, evt)
+        if target_fdr:
+            target_fdr.setdefault("events", []).insert(0, evt)
         return evt
 
 fdr_service = FDRService()

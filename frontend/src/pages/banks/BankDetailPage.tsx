@@ -207,15 +207,6 @@ export const BankDetailPage: React.FC = () => {
             </button>
           )}
         </div>
-
-        {/* Phase Boundary Notice */}
-        <div className="mt-4 p-3 bg-amber-50/70 border border-amber-200/80 rounded text-xs text-amber-900 flex items-start gap-2">
-          <Info className="w-4 h-4 text-amber-700 mt-0.5 shrink-0" />
-          <div className="leading-relaxed">
-            <span className="font-semibold">Phase 1 Boundary Notice: </span>
-            This screen manages institutional bank branches and IFSC directory master data. Direct bank FDR electronic verification, dual-custody lien marking, and Ed25519 digital signatures will be activated in Phase 2.
-          </div>
-        </div>
       </div>
 
       {/* Branches List Table */}

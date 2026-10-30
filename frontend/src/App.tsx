@@ -46,6 +46,15 @@ import { ComplianceTemplatesPage } from './pages/compliance/ComplianceTemplatesP
 import { GenerateComplianceDocumentPage } from './pages/compliance/GenerateComplianceDocumentPage';
 import { ComplianceDocumentDetailPage } from './pages/compliance/ComplianceDocumentDetailPage';
 
+// Phase 8: FDR Release, Refund & Closure Management Pages
+import { ReleaseDashboardPage } from './pages/release/ReleaseDashboardPage';
+import { CreateReleaseRequestPage } from './pages/release/CreateReleaseRequestPage';
+import { ReleaseRequestDetailsPage } from './pages/release/ReleaseRequestDetailsPage';
+import { ReleaseReviewQueuePage } from './pages/release/ReleaseReviewQueuePage';
+import { RefundManagementPage } from './pages/release/RefundManagementPage';
+import { BankReleaseTrackingPage } from './pages/release/BankReleaseTrackingPage';
+import { ReleasePolicyManagementPage } from './pages/admin/ReleasePolicyManagementPage';
+
 // Main Pages
 import { DashboardOverviewPage } from './pages/dashboard/DashboardOverviewPage';
 import { FDRListPage } from './pages/fdrs/FDRListPage';
@@ -281,6 +290,58 @@ export const App: React.FC = () => {
                 }
               />
               <Route path="/compliance/documents/:id" element={<ComplianceDocumentDetailPage />} />
+
+              {/* Phase 8: FDR Release, Refund & Closure Management */}
+              <Route path="/releases" element={<ReleaseDashboardPage />} />
+              <Route
+                path="/releases/new"
+                element={
+                  <RoleRoute allowedRoles={['institution_user', 'system_admin', 'regional_officer']}>
+                    <CreateReleaseRequestPage />
+                  </RoleRoute>
+                }
+              />
+              <Route
+                path="/releases/queue"
+                element={
+                  <RoleRoute
+                    allowedRoles={[
+                      'system_admin',
+                      'bureau_officer',
+                      'regional_officer',
+                      'finance_officer',
+                    ]}
+                  >
+                    <ReleaseReviewQueuePage />
+                  </RoleRoute>
+                }
+              />
+              <Route path="/releases/:id" element={<ReleaseRequestDetailsPage />} />
+              <Route
+                path="/refunds"
+                element={
+                  <RoleRoute
+                    allowedRoles={[
+                      'system_admin',
+                      'finance_officer',
+                      'bureau_officer',
+                      'regional_officer',
+                      'institution_user',
+                    ]}
+                  >
+                    <RefundManagementPage />
+                  </RoleRoute>
+                }
+              />
+              <Route path="/releases/bank-tracking" element={<BankReleaseTrackingPage />} />
+              <Route
+                path="/admin/release-policies"
+                element={
+                  <RoleRoute allowedRoles={['system_admin', 'bureau_officer']}>
+                    <ReleasePolicyManagementPage />
+                  </RoleRoute>
+                }
+              />
 
               {/* Profile & Security */}
               <Route path="/profile" element={<ProfilePage />} />

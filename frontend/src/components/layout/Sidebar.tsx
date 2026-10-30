@@ -26,6 +26,8 @@ import {
   FileSpreadsheet,
   ScrollText,
   PenTool,
+  FileCheck2,
+  IndianRupee,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -157,13 +159,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             </nav>
           </div>
 
-          {/* Phase 4: Heartbeat Surveillance & Alert Desk */}
+          {/* Surveillance & Alert Desk */}
           <div>
             <div className="px-3 mb-2 flex items-center justify-between text-[10px] font-bold tracking-wider text-gov-muted uppercase">
               <span>Surveillance & Alerts</span>
-              <span className="px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 text-[9px] font-semibold">
-                Phase 4 Live
-              </span>
             </div>
             <nav className="space-y-1">
               <NavLink to="/heartbeat" className={navLinkClass} onClick={onClose}>
@@ -190,13 +189,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             </nav>
           </div>
 
-          {/* Phase 5: Renewal Management & FDR Lineage */}
+          {/* Renewal Management & FDR Lineage */}
           <div>
             <div className="px-3 mb-2 flex items-center justify-between text-[10px] font-bold tracking-wider text-gov-muted uppercase">
               <span>Renewals & Lineage</span>
-              <span className="px-1.5 py-0.2 rounded bg-purple-100 text-purple-800 text-[9px] font-semibold">
-                Phase 5 Live
-              </span>
             </div>
             <nav className="space-y-1">
               <NavLink to="/renewals" className={navLinkClass} onClick={onClose}>
@@ -218,13 +214,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             </nav>
           </div>
 
-          {/* Phase 6: Officer Desk & Priority Queue */}
+          {/* Officer Desk & Priority Queue */}
           <div>
             <div className="px-3 mb-2 flex items-center justify-between text-[10px] font-bold tracking-wider text-gov-muted uppercase">
               <span>Officer Operations</span>
-              <span className="px-1.5 py-0.2 rounded bg-blue-100 text-blue-800 text-[9px] font-semibold">
-                Phase 6 Live
-              </span>
             </div>
             <nav className="space-y-1">
               <NavLink to="/officer/dashboard" className={navLinkClass} onClick={onClose}>
@@ -260,13 +253,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             </nav>
           </div>
 
-          {/* Legacy Migration Section (Phase 7 Live) */}
+          {/* Legacy Migration Section */}
           <div className="pt-3 border-t border-gov-border">
             <div className="px-3 mb-2 flex items-center justify-between text-[10px] font-bold tracking-wider text-gov-muted uppercase">
               <span>Legacy Migration</span>
-              <span className="px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 text-[9px] font-semibold border border-emerald-200">
-                Phase 7 Active
-              </span>
             </div>
             <nav className="space-y-1">
               <NavLink to="/migrations" className={navLinkClass} onClick={onClose} end>
@@ -283,13 +273,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             </nav>
           </div>
 
-          {/* Compliance Documents Section (Phase 7 Live) */}
+          {/* Compliance Documents Section */}
           <div className="pt-3 border-t border-gov-border">
             <div className="px-3 mb-2 flex items-center justify-between text-[10px] font-bold tracking-wider text-gov-muted uppercase">
               <span>Compliance Documents</span>
-              <span className="px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 text-[9px] font-semibold border border-indigo-200">
-                Phase 7 Active
-              </span>
             </div>
             <nav className="space-y-1">
               <NavLink to="/compliance" className={navLinkClass} onClick={onClose} end>
@@ -306,6 +293,48 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 <PenTool className="w-4 h-4 text-amber-600" />
                 <span>Generate Notice / Letter</span>
               </NavLink>
+            </nav>
+          </div>
+
+          {/* Phase 8: Release, Refund & Closure Management Section */}
+          <div className="pt-3 border-t border-gov-border">
+            <div className="px-3 mb-2 flex items-center justify-between text-[10px] font-bold tracking-wider text-gov-muted uppercase">
+              <span>Release & Settlements</span>
+            </div>
+            <nav className="space-y-1">
+              <NavLink to="/releases" className={navLinkClass} onClick={onClose} end>
+                <FileCheck2 className="w-4 h-4 text-blue-700" />
+                <span>Release Command</span>
+              </NavLink>
+
+              <NavLink to="/releases/queue" className={navLinkClass} onClick={onClose}>
+                <Clock className="w-4 h-4 text-indigo-600" />
+                <span>Review Queue</span>
+              </NavLink>
+
+              {(isAdmin || isInstUser || isRegional) && (
+                <NavLink to="/releases/new" className={navLinkClass} onClick={onClose}>
+                  <Coins className="w-4 h-4 text-emerald-600" />
+                  <span>Initiate Release</span>
+                </NavLink>
+              )}
+
+              <NavLink to="/releases/bank-tracking" className={navLinkClass} onClick={onClose}>
+                <Building2 className="w-4 h-4 text-amber-600" />
+                <span>Bank Release Tracking</span>
+              </NavLink>
+
+              <NavLink to="/refunds" className={navLinkClass} onClick={onClose}>
+                <IndianRupee className="w-4 h-4 text-teal-600" />
+                <span>Refund Ledger</span>
+              </NavLink>
+
+              {(isAdmin || isBureau) && (
+                <NavLink to="/admin/release-policies" className={navLinkClass} onClick={onClose}>
+                  <Sliders className="w-4 h-4 text-purple-600" />
+                  <span>Release Policies</span>
+                </NavLink>
+              )}
             </nav>
           </div>
         </div>

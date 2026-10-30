@@ -260,7 +260,7 @@ export const FDRRegisterPage: React.FC = () => {
         <div className="bg-white p-6 rounded-lg border border-gov-border shadow-xs">
           <div className="flex items-center gap-2">
             <span className="px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase bg-[#12345A]/10 text-gov-navy rounded">
-              Phase 2 E-Registration
+              Statutory E-Registration
             </span>
             <span className="text-xs text-gov-muted font-medium">Depositor Custody Workflow</span>
           </div>
@@ -273,15 +273,15 @@ export const FDRRegisterPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Strict Phase 2 Governance Alert */}
-      <div className="p-4 rounded-lg bg-amber-50/70 border border-amber-200 text-amber-900 text-xs flex items-start gap-3">
-        <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+      {/* Trust Tier 1 Governance Notice */}
+      <div className="p-4 rounded-lg bg-blue-50/70 border border-blue-200 text-blue-950 text-xs flex items-start gap-3">
+        <ShieldAlert className="w-5 h-5 text-gov-blue shrink-0 mt-0.5" />
         <div>
-          <span className="font-bold text-amber-800">Phase 2 Governance Invariant:</span>
-          <p className="mt-0.5 text-amber-700 leading-relaxed">
+          <span className="font-bold text-gov-navy">Statutory Custodial Invariant:</span>
+          <p className="mt-0.5 text-gov-muted leading-relaxed">
             All newly declared deposits are created strictly with{' '}
-            <strong className="underline">Trust Tier 1</strong> (Status: <em>Pending</em>, Verification:{' '}
-            <em>Institution Declared</em>). Promotion to Trust Tier 2 (Bank Confirmed) requires subsequent digital verification by the depository bank's nodal officer in Phase 3.
+            <strong className="underline text-gov-navy">Trust Tier 1</strong> (Status: <em>Pending</em>, Verification:{' '}
+            <em>Institution Declared</em>). Promotion to Trust Tier 2 (Bank Confirmed) requires subsequent digital verification by the depository bank's nodal officer.
           </p>
         </div>
       </div>

@@ -108,7 +108,7 @@ export const ForgotPasswordPage: React.FC = () => {
       </div>
 
       <div className="py-3 text-center text-xs text-gov-muted border-t border-gov-border bg-white">
-        FDR-Chain Portal • Phase 1 Identity Recovery
+        FDR-Chain Portal • Institutional Identity Recovery
       </div>
     </div>
   );

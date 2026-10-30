@@ -79,7 +79,7 @@ export const HeartbeatDashboardPage: React.FC = () => {
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#1D5F91]">
             <Activity className="w-4 h-4 text-emerald-600 animate-pulse" />
-            Phase 4: Automated Liveness & Integrity Surveillance
+            Automated Liveness & Integrity Surveillance
           </div>
           <h1 className="text-2xl font-bold text-[#12345A] mt-1">
             FDR Heartbeat Monitoring & Regulatory Surveillance

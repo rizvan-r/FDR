@@ -113,7 +113,7 @@ export const DashboardOverviewPage: React.FC = () => {
           <div>
             <div className="flex items-center gap-2 mb-1.5">
               <Badge variant="navy">AICTE FDR-Chain Enterprise Platform</Badge>
-              <Badge variant="success">All Subsystems Live (Phases 1-7)</Badge>
+              <Badge variant="success">All Subsystems Operational</Badge>
             </div>
             <h1 className="text-xl font-bold text-gov-navy">
               Welcome, {user?.full_name || 'Officer'}

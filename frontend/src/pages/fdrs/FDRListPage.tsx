@@ -161,6 +161,10 @@ export const FDRListPage: React.FC = () => {
         return <Badge variant="default">Matured</Badge>;
       case 'released':
         return <Badge variant="navy">Released</Badge>;
+      case 'closed':
+        return <Badge variant="navy">Closed & Discharged</Badge>;
+      case 'renewed':
+        return <Badge variant="info">Renewed</Badge>;
       case 'invoked':
         return <Badge variant="danger">Invoked</Badge>;
       default:
@@ -203,7 +207,7 @@ export const FDRListPage: React.FC = () => {
         <div>
           <div className="flex items-center gap-2">
             <span className="px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase bg-[#12345A]/10 text-gov-navy rounded">
-              Phase 2 Operational
+              Central Registry
             </span>
             <span className="text-xs text-gov-muted font-medium">Sovereign Deposit Registry</span>
           </div>

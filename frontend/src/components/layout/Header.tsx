@@ -105,14 +105,14 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
               )}
             </Link>
 
-            {/* Role Switcher (Crucial for SIH 2026 Evaluation across the 6 roles) */}
+            {/* Institutional Role Switcher */}
             <div className="relative">
               <button
                 onClick={() => setRoleDropdownOpen(!roleDropdownOpen)}
                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border ${
                   currentRoleInfo?.badgeClass || 'bg-gray-100 text-gray-700'
                 }`}
-                title="Switch active role for validation"
+                title="Switch active role"
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
                 <span>{currentRoleInfo?.label || 'Select Role'}</span>
@@ -122,7 +122,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }
               {roleDropdownOpen && (
                 <div className="absolute right-0 mt-2 w-64 bg-white rounded-md shadow-gov-lg border border-gov-border py-1.5 z-50 text-xs">
                   <div className="px-3 py-1.5 border-b border-gov-border text-[10px] font-bold text-gov-muted uppercase tracking-wider">
-                    Role Verification Switcher (Phase 1)
+                    Active Role Switcher
                   </div>
                   {(Object.keys(ROLE_LABELS) as UserRole[]).map((roleKey) => (
                     <button

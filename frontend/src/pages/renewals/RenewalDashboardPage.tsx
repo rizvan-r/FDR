@@ -44,7 +44,7 @@ export const RenewalDashboardPage: React.FC = () => {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="text-xs font-bold uppercase tracking-wider text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded border border-blue-200">
-              Phase 5
+              Governed Renewals
             </span>
             <span className="text-xs font-medium text-slate-500">
               Lifecycle Governance & Lineage Integrity

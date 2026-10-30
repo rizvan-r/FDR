@@ -46,6 +46,20 @@ import {
   ComplianceDocumentVersion,
   DocumentReview,
   MockSignatureRecord,
+  ReleaseRequestStatus,
+  BankReleaseStatus,
+  RefundStatus,
+  ChecklistItemStatus,
+  ReleasePolicyVersion,
+  ReleaseChecklistItem,
+  ReleaseReviewItem,
+  BankReleaseRecord,
+  RefundTransaction,
+  RefundRecord,
+  ReleaseClosureRecord,
+  ReleaseRequestSummary,
+  ReleaseRequestDetail,
+  ReleaseDashboardStats,
 } from '../types';
 import {
   SEED_REGIONS,
@@ -77,6 +91,11 @@ import {
   SEED_MIGRATION_BATCHES,
   SEED_COMPLIANCE_TEMPLATES,
   SEED_COMPLIANCE_DOCUMENTS,
+  SEED_RELEASE_POLICIES,
+  SEED_RELEASE_REQUESTS,
+  SEED_RELEASE_CHECKLIST,
+  SEED_BANK_RELEASES,
+  SEED_REFUND_RECORDS,
 } from './mockData';
 
 // Storage keys for local development persistence
@@ -105,6 +124,12 @@ const STORAGE_KEYS = {
   MIGRATION_PROFILES: 'fdr_dev_migration_profiles',
   COMPLIANCE_TEMPLATES: 'fdr_dev_compliance_templates',
   COMPLIANCE_DOCUMENTS: 'fdr_dev_compliance_documents',
+  RELEASE_POLICIES: 'fdr_dev_release_policies',
+  RELEASE_REQUESTS: 'fdr_dev_release_requests',
+  RELEASE_CHECKLIST: 'fdr_dev_release_checklist',
+  BANK_RELEASES: 'fdr_dev_bank_releases',
+  REFUND_RECORDS: 'fdr_dev_refund_records',
+  RELEASE_CLOSURES: 'fdr_dev_release_closures',
 };
 
 function getLocalOrInit<T>(key: string, seed: T[]): T[] {
@@ -3622,6 +3647,1040 @@ export async function fetchDocumentVersions(id: string): Promise<ComplianceDocum
   ];
 }
 
+// ============================================================================
+// PHASE 8: FDR RELEASE, REFUND & CLOSURE MANAGEMENT API
+// ============================================================================
 
+export async function fetchReleaseDashboardStats(): Promise<ReleaseDashboardStats> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/release-requests/stats`, {
+      method: 'GET',
+      headers: { ...headers },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // Fallback to local
+  }
 
+  const requests = getLocalOrInit(STORAGE_KEYS.RELEASE_REQUESTS, SEED_RELEASE_REQUESTS);
+  let draftCount = 0;
+  let underReviewCount = 0;
+  let approvedCount = 0;
+  let bankReleasePending = 0;
+  let refundPending = 0;
+  let closedCount = 0;
+  let totalReleasedAmount = 0;
 
+  for (const r of requests) {
+    if (r.request_status === 'draft') draftCount++;
+    else if (['submitted', 'preliminary_review', 'eligibility_review', 'finance_review', 'authority_review'].includes(r.request_status)) underReviewCount++;
+    else if (r.request_status === 'approved') approvedCount++;
+    else if (r.request_status === 'bank_confirmed') bankReleasePending++;
+    else if (r.request_status === 'closed') {
+      closedCount++;
+      totalReleasedAmount += (r.principal_amount || 0);
+    }
+
+    if (r.refund_status === 'pending' || r.refund_status === 'partially_received' || r.refund_status === 'reconciliation_pending') {
+      refundPending++;
+    }
+  }
+
+  return {
+    total_requests: requests.length,
+    draft_count: draftCount,
+    under_review_count: underReviewCount,
+    approved_count: approvedCount,
+    bank_release_pending: bankReleasePending,
+    refund_pending: refundPending,
+    closed_count: closedCount,
+    total_released_amount: totalReleasedAmount,
+  };
+}
+
+export async function listReleaseRequests(params?: {
+  status?: string;
+  institution_id?: string;
+  search?: string;
+}): Promise<ReleaseRequestSummary[]> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  const query = new URLSearchParams();
+  if (params?.status) query.set('status', params.status);
+  if (params?.institution_id) query.set('institution_id', params.institution_id);
+
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/release-requests?${query.toString()}`, {
+      method: 'GET',
+      headers: { ...headers },
+    });
+    if (res.ok) {
+      const data: ReleaseRequestSummary[] = await res.json();
+      if (params?.search) {
+        const q = params.search.toLowerCase();
+        return data.filter(
+          (r) =>
+            r.request_number.toLowerCase().includes(q) ||
+            r.fdr_number?.toLowerCase().includes(q) ||
+            r.institution_name?.toLowerCase().includes(q)
+        );
+      }
+      return data;
+    }
+  } catch {
+    // Fallback to local
+  }
+
+  let requests = getLocalOrInit(STORAGE_KEYS.RELEASE_REQUESTS, SEED_RELEASE_REQUESTS);
+  if (params?.status) {
+    requests = requests.filter((r) => r.request_status === params.status);
+  }
+  if (params?.institution_id) {
+    requests = requests.filter((r) => r.institution_id === params.institution_id);
+  }
+  if (params?.search) {
+    const q = params.search.toLowerCase();
+    requests = requests.filter(
+      (r) =>
+        r.request_number.toLowerCase().includes(q) ||
+        r.fdr_number?.toLowerCase().includes(q) ||
+        r.institution_name?.toLowerCase().includes(q)
+    );
+  }
+  return requests;
+}
+
+export async function fetchReleaseRequestDetail(id: string): Promise<ReleaseRequestDetail> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/release-requests/${id}`, {
+      method: 'GET',
+      headers: { ...headers },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // Fallback to local
+  }
+
+  const requests = getLocalOrInit(STORAGE_KEYS.RELEASE_REQUESTS, SEED_RELEASE_REQUESTS);
+  const req = requests.find((r) => r.id === id);
+  if (!req) throw new Error(`Release request ${id} not found.`);
+
+  const fdrs = getLocalOrInit(STORAGE_KEYS.FDRS, SEED_FDRS);
+  const fdr = fdrs.find((f) => f.id === req.fdr_id);
+
+  const policies = getLocalOrInit(STORAGE_KEYS.RELEASE_POLICIES, SEED_RELEASE_POLICIES);
+  const policy = policies.find((p) => p.id === req.policy_version_id) || policies[0];
+
+  const allChecklist = getLocalOrInit(STORAGE_KEYS.RELEASE_CHECKLIST, SEED_RELEASE_CHECKLIST);
+  const checklist_items = allChecklist.filter((c) => c.release_request_id === id);
+
+  const bankReleases = getLocalOrInit(STORAGE_KEYS.BANK_RELEASES, SEED_BANK_RELEASES);
+  const bank_release = bankReleases.find((b) => b.release_request_id === id);
+
+  const refundRecords = getLocalOrInit(STORAGE_KEYS.REFUND_RECORDS, SEED_REFUND_RECORDS);
+  const refund_record = refundRecords.find((r) => r.release_request_id === id);
+
+  return {
+    ...req,
+    fdr_details: fdr,
+    policy_details: policy,
+    checklist_items: checklist_items.length > 0 ? checklist_items : (policy?.checklist_configuration || []).map((c, idx) => ({
+      id: `chk-${id}-${idx + 1}`,
+      release_request_id: id,
+      policy_requirement_key: c.key,
+      requirement_title: c.title,
+      requirement_description: c.description,
+      is_required: c.is_required,
+      review_status: 'pending' as ChecklistItemStatus,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })),
+    reviews: [
+      {
+        id: `rev-${id}-1`,
+        release_request_id: id,
+        review_stage: 'preliminary_review',
+        reviewer_id: 'usr-regional-01',
+        reviewer_name: 'Smt. Ananya Roy',
+        reviewer_role: 'regional_officer',
+        review_decision: 'recommend_approval',
+        comments: 'Initial statutory documentation verified. Clear tenure completion without dispute.',
+        reviewed_at: new Date(Date.now() - 86400000).toISOString(),
+        created_at: new Date(Date.now() - 86400000).toISOString(),
+      },
+    ],
+    bank_release,
+    refund_record,
+  };
+}
+
+export async function createReleaseRequest(
+  fdrId: string,
+  payload: { request_reason: string; policy_version_id?: string }
+): Promise<ReleaseRequestSummary> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/fdrs/${fdrId}/release-requests`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    const err = await res.json().catch(() => ({}));
+    if (err.detail) throw new Error(err.detail);
+  } catch (err: any) {
+    if (err.message && !err.message.includes('fetch')) throw err;
+  }
+
+  // Local fallback
+  const requests = getLocalOrInit(STORAGE_KEYS.RELEASE_REQUESTS, SEED_RELEASE_REQUESTS);
+  const conflicting = requests.find((r) => r.fdr_id === fdrId && !['closed', 'rejected', 'cancelled'].includes(r.request_status));
+  if (conflicting) {
+    throw new Error(`An active release request (${conflicting.request_number}) already exists for this FDR.`);
+  }
+
+  const fdrs = getLocalOrInit(STORAGE_KEYS.FDRS, SEED_FDRS);
+  const fdr = fdrs.find((f) => f.id === fdrId);
+  if (!fdr) throw new Error(`FDR ${fdrId} not found.`);
+
+  const policies = getLocalOrInit(STORAGE_KEYS.RELEASE_POLICIES, SEED_RELEASE_POLICIES);
+  const activePolicy = policies.find((p) => p.is_active) || policies[0];
+
+  const newId = `rel-req-${Date.now()}`;
+  const reqNum = `REL-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+  const now = new Date().toISOString();
+
+  const newReq: ReleaseRequestSummary = {
+    id: newId,
+    request_number: reqNum,
+    fdr_id: fdr.id,
+    fdr_number: fdr.fdr_number,
+    principal_amount: fdr.amount,
+    bank_name: fdr.bank_name,
+    institution_id: fdr.institution_id,
+    institution_name: fdr.institution_name,
+    requested_by: 'usr-inst-01',
+    request_reason: payload.request_reason,
+    request_status: 'draft',
+    policy_version_id: payload.policy_version_id || activePolicy?.id || 'policy-rel-01',
+    policy_version: activePolicy?.policy_version || 'RPV-2026.1',
+    bank_release_status: 'not_started',
+    refund_status: 'pending',
+    created_at: now,
+    updated_at: now,
+  };
+
+  saveLocal(STORAGE_KEYS.RELEASE_REQUESTS, [newReq, ...requests]);
+
+  // Seed checklist items for this request
+  if (activePolicy?.checklist_configuration) {
+    const allChecklist = getLocalOrInit(STORAGE_KEYS.RELEASE_CHECKLIST, SEED_RELEASE_CHECKLIST);
+    const newItems: ReleaseChecklistItem[] = activePolicy.checklist_configuration.map((c, idx) => ({
+      id: `chk-${newId}-${idx + 1}`,
+      release_request_id: newId,
+      policy_requirement_key: c.key,
+      requirement_title: c.title,
+      requirement_description: c.description,
+      is_required: c.is_required,
+      review_status: 'pending',
+      created_at: now,
+      updated_at: now,
+    }));
+    saveLocal(STORAGE_KEYS.RELEASE_CHECKLIST, [...newItems, ...allChecklist]);
+  }
+
+  return newReq;
+}
+
+export async function updateReleaseRequest(
+  id: string,
+  payload: { request_reason?: string }
+): Promise<ReleaseRequestSummary> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/release-requests/${id}`, {
+      method: 'PATCH',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // Fallback
+  }
+
+  const requests = getLocalOrInit(STORAGE_KEYS.RELEASE_REQUESTS, SEED_RELEASE_REQUESTS);
+  const req = requests.find((r) => r.id === id);
+  if (!req) throw new Error(`Release request ${id} not found.`);
+  if (req.request_status !== 'draft') {
+    throw new Error('Only draft release requests can be edited.');
+  }
+
+  if (payload.request_reason) req.request_reason = payload.request_reason;
+  req.updated_at = new Date().toISOString();
+  saveLocal(STORAGE_KEYS.RELEASE_REQUESTS, requests);
+  return req;
+}
+
+export async function submitReleaseRequest(id: string): Promise<ReleaseRequestSummary> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/release-requests/${id}/submit`, {
+      method: 'POST',
+      headers: { ...headers },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    const err = await res.json().catch(() => ({}));
+    if (err.detail) throw new Error(err.detail);
+  } catch (err: any) {
+    if (err.message && !err.message.includes('fetch')) throw err;
+  }
+
+  const requests = getLocalOrInit(STORAGE_KEYS.RELEASE_REQUESTS, SEED_RELEASE_REQUESTS);
+  const req = requests.find((r) => r.id === id);
+  if (!req) throw new Error(`Release request ${id} not found.`);
+  if (!['draft', 'returned_for_correction'].includes(req.request_status)) {
+    throw new Error(`Cannot submit release request in status '${req.request_status}'.`);
+  }
+
+  req.request_status = 'preliminary_review';
+  req.submitted_at = new Date().toISOString();
+  req.updated_at = new Date().toISOString();
+  saveLocal(STORAGE_KEYS.RELEASE_REQUESTS, requests);
+  return req;
+}
+
+export async function cancelReleaseRequest(id: string, cancellation_reason?: string): Promise<ReleaseRequestSummary> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/release-requests/${id}/cancel`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cancellation_reason: cancellation_reason || 'Cancelled by applicant.' }),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // Fallback
+  }
+
+  const requests = getLocalOrInit(STORAGE_KEYS.RELEASE_REQUESTS, SEED_RELEASE_REQUESTS);
+  const req = requests.find((r) => r.id === id);
+  if (!req) throw new Error(`Release request ${id} not found.`);
+
+  req.request_status = 'cancelled';
+  req.updated_at = new Date().toISOString();
+  saveLocal(STORAGE_KEYS.RELEASE_REQUESTS, requests);
+  return req;
+}
+
+export async function fetchReleaseChecklist(id: string): Promise<ReleaseChecklistItem[]> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/release-requests/${id}/checklist`, {
+      method: 'GET',
+      headers: { ...headers },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // Fallback
+  }
+
+  const allChecklist = getLocalOrInit(STORAGE_KEYS.RELEASE_CHECKLIST, SEED_RELEASE_CHECKLIST);
+  return allChecklist.filter((c) => c.release_request_id === id);
+}
+
+export async function updateReleaseChecklistItem(
+  id: string,
+  itemId: string,
+  payload: { review_status: ChecklistItemStatus; review_comments?: string; evidence_document_id?: string }
+): Promise<ReleaseChecklistItem> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/release-requests/${id}/checklist/${itemId}`, {
+      method: 'PATCH',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // Fallback
+  }
+
+  const allChecklist = getLocalOrInit(STORAGE_KEYS.RELEASE_CHECKLIST, SEED_RELEASE_CHECKLIST);
+  const item = allChecklist.find((c) => c.id === itemId && c.release_request_id === id);
+  if (!item) throw new Error(`Checklist item ${itemId} not found.`);
+
+  item.review_status = payload.review_status;
+  if (payload.review_comments !== undefined) item.review_comments = payload.review_comments;
+  if (payload.evidence_document_id !== undefined) item.evidence_document_id = payload.evidence_document_id;
+  item.reviewed_by = 'usr-officer-01';
+  item.reviewed_at = new Date().toISOString();
+  item.updated_at = new Date().toISOString();
+
+  saveLocal(STORAGE_KEYS.RELEASE_CHECKLIST, allChecklist);
+  return item;
+}
+
+export async function fetchReleaseReviews(id: string): Promise<ReleaseReviewItem[]> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/release-requests/${id}/reviews`, {
+      method: 'GET',
+      headers: { ...headers },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // Fallback
+  }
+  return [];
+}
+
+export async function submitReleaseReview(
+  id: string,
+  payload: { review_stage: string; review_decision: string; comments: string }
+): Promise<ReleaseReviewItem> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/release-requests/${id}/reviews`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    const err = await res.json().catch(() => ({}));
+    if (err.detail) throw new Error(err.detail);
+  } catch (err: any) {
+    if (err.message && !err.message.includes('fetch')) throw err;
+  }
+
+  // Local fallback
+  const newRev: ReleaseReviewItem = {
+    id: `rev-${id}-${Date.now()}`,
+    release_request_id: id,
+    review_stage: payload.review_stage,
+    reviewer_id: 'usr-officer-01',
+    reviewer_name: 'Supervisory Officer',
+    reviewer_role: 'bureau_officer',
+    review_decision: payload.review_decision as any,
+    comments: payload.comments,
+    reviewed_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+  };
+  return newRev;
+}
+
+export async function returnReleaseRequest(id: string, comments: string): Promise<any> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/release-requests/${id}/return`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ comments }),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    const err = await res.json().catch(() => ({}));
+    if (err.detail) throw new Error(err.detail);
+  } catch (err: any) {
+    if (err.message && !err.message.includes('fetch')) throw err;
+  }
+
+  const requests = getLocalOrInit(STORAGE_KEYS.RELEASE_REQUESTS, SEED_RELEASE_REQUESTS);
+  const req = requests.find((r) => r.id === id);
+  if (req) {
+    req.request_status = 'returned_for_correction';
+    req.decision_comments = comments;
+    req.updated_at = new Date().toISOString();
+    saveLocal(STORAGE_KEYS.RELEASE_REQUESTS, requests);
+  }
+  return { success: true };
+}
+
+export async function approveReleaseRequest(id: string, comments: string): Promise<any> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/release-requests/${id}/approve`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ comments }),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    const err = await res.json().catch(() => ({}));
+    if (err.detail) throw new Error(err.detail);
+  } catch (err: any) {
+    if (err.message && !err.message.includes('fetch')) throw err;
+  }
+
+  const requests = getLocalOrInit(STORAGE_KEYS.RELEASE_REQUESTS, SEED_RELEASE_REQUESTS);
+  const req = requests.find((r) => r.id === id);
+  if (req) {
+    req.request_status = 'approved';
+    req.final_decision_by = 'usr-admin-01';
+    req.final_decision_at = new Date().toISOString();
+    req.decision_comments = comments;
+    req.updated_at = new Date().toISOString();
+    saveLocal(STORAGE_KEYS.RELEASE_REQUESTS, requests);
+  }
+  return { success: true };
+}
+
+export async function rejectReleaseRequest(id: string, comments: string): Promise<any> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/release-requests/${id}/reject`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ comments }),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    const err = await res.json().catch(() => ({}));
+    if (err.detail) throw new Error(err.detail);
+  } catch (err: any) {
+    if (err.message && !err.message.includes('fetch')) throw err;
+  }
+
+  const requests = getLocalOrInit(STORAGE_KEYS.RELEASE_REQUESTS, SEED_RELEASE_REQUESTS);
+  const req = requests.find((r) => r.id === id);
+  if (req) {
+    req.request_status = 'rejected';
+    req.final_decision_by = 'usr-admin-01';
+    req.final_decision_at = new Date().toISOString();
+    req.decision_comments = comments;
+    req.updated_at = new Date().toISOString();
+    saveLocal(STORAGE_KEYS.RELEASE_REQUESTS, requests);
+  }
+  return { success: true };
+}
+
+export async function prepareReleaseInstruction(
+  id: string,
+  payload?: { bank_id?: string; instruction_notes?: string }
+): Promise<BankReleaseRecord> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/release-requests/${id}/release-instruction`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload || {}),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    const err = await res.json().catch(() => ({}));
+    if (err.detail) throw new Error(err.detail);
+  } catch (err: any) {
+    if (err.message && !err.message.includes('fetch')) throw err;
+  }
+
+  const requests = getLocalOrInit(STORAGE_KEYS.RELEASE_REQUESTS, SEED_RELEASE_REQUESTS);
+  const req = requests.find((r) => r.id === id);
+  if (!req) throw new Error(`Release request ${id} not found.`);
+
+  const bankReleases = getLocalOrInit(STORAGE_KEYS.BANK_RELEASES, SEED_BANK_RELEASES);
+  const now = new Date().toISOString();
+  const instRef = `AICTE/REL/INST/2026/${Math.floor(1000 + Math.random() * 9000)}`;
+
+  let record = bankReleases.find((b) => b.release_request_id === id);
+  if (record) {
+    record.instruction_reference = instRef;
+    record.release_status = 'instruction_prepared';
+    record.updated_at = now;
+  } else {
+    record = {
+      id: `bank-rel-${Date.now()}`,
+      release_request_id: id,
+      fdr_id: req.fdr_id,
+      bank_name: req.bank_name,
+      release_status: 'instruction_prepared',
+      instruction_reference: instRef,
+      is_mock: true,
+      disclaimer: 'SIMULATED DEMO — NOT AN ACTUAL BANK MONEY TRANSFER',
+      created_at: now,
+      updated_at: now,
+    };
+    bankReleases.push(record);
+  }
+  saveLocal(STORAGE_KEYS.BANK_RELEASES, bankReleases);
+
+  req.bank_release_status = 'instruction_prepared';
+  req.request_status = 'release_initiated';
+  saveLocal(STORAGE_KEYS.RELEASE_REQUESTS, requests);
+
+  return record;
+}
+
+export async function fetchBankReleaseStatus(id: string): Promise<BankReleaseRecord> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/release-requests/${id}/bank-status`, {
+      method: 'GET',
+      headers: { ...headers },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // Fallback
+  }
+
+  const bankReleases = getLocalOrInit(STORAGE_KEYS.BANK_RELEASES, SEED_BANK_RELEASES);
+  const rec = bankReleases.find((b) => b.release_request_id === id);
+  if (!rec) throw new Error('Bank release record not found.');
+  return rec;
+}
+
+export async function recordBankConfirmation(
+  id: string,
+  payload: {
+    bank_reference: string;
+    release_status: string;
+    bank_confirmation_date?: string;
+    confirmation_method?: string;
+    evidence_document_id?: string;
+  }
+): Promise<BankReleaseRecord> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/release-requests/${id}/bank-confirmation`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    const err = await res.json().catch(() => ({}));
+    if (err.detail) throw new Error(err.detail);
+  } catch (err: any) {
+    if (err.message && !err.message.includes('fetch')) throw err;
+  }
+
+  const bankReleases = getLocalOrInit(STORAGE_KEYS.BANK_RELEASES, SEED_BANK_RELEASES);
+  const requests = getLocalOrInit(STORAGE_KEYS.RELEASE_REQUESTS, SEED_RELEASE_REQUESTS);
+  const req = requests.find((r) => r.id === id);
+
+  const now = new Date().toISOString();
+  let record = bankReleases.find((b) => b.release_request_id === id);
+  if (!record) {
+    record = {
+      id: `bank-rel-${Date.now()}`,
+      release_request_id: id,
+      fdr_id: req?.fdr_id || 'fdr-001',
+      release_status: payload.release_status as any,
+      bank_reference: payload.bank_reference,
+      bank_confirmation_date: payload.bank_confirmation_date || now,
+      confirmation_method: payload.confirmation_method || 'simulated_bank_portal',
+      is_mock: true,
+      disclaimer: 'SIMULATED DEMO — NOT AN ACTUAL BANK MONEY TRANSFER',
+      created_at: now,
+      updated_at: now,
+    };
+    bankReleases.push(record);
+  } else {
+    record.release_status = payload.release_status as any;
+    record.bank_reference = payload.bank_reference;
+    record.bank_confirmation_date = payload.bank_confirmation_date || now;
+    record.confirmation_method = payload.confirmation_method || 'simulated_bank_portal';
+    record.updated_at = now;
+  }
+  saveLocal(STORAGE_KEYS.BANK_RELEASES, bankReleases);
+
+  if (req) {
+    req.bank_release_status = payload.release_status as any;
+    if (payload.release_status === 'released') {
+      req.request_status = 'bank_confirmed';
+      // Transition FDR lifecycle status to released
+      const fdrs = getLocalOrInit(STORAGE_KEYS.FDRS, SEED_FDRS);
+      const fdr = fdrs.find((f) => f.id === req.fdr_id);
+      if (fdr) {
+        fdr.lifecycle_status = 'released';
+        saveLocal(STORAGE_KEYS.FDRS, fdrs);
+      }
+    }
+    req.updated_at = now;
+    saveLocal(STORAGE_KEYS.RELEASE_REQUESTS, requests);
+  }
+
+  return record;
+}
+
+export async function fetchRefundRecord(id: string): Promise<RefundRecord> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/release-requests/${id}/refunds`, {
+      method: 'GET',
+      headers: { ...headers },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // Fallback
+  }
+
+  const refundRecords = getLocalOrInit(STORAGE_KEYS.REFUND_RECORDS, SEED_REFUND_RECORDS);
+  const rec = refundRecords.find((r) => r.release_request_id === id);
+  if (!rec) {
+    const requests = getLocalOrInit(STORAGE_KEYS.RELEASE_REQUESTS, SEED_RELEASE_REQUESTS);
+    const req = requests.find((r) => r.id === id);
+    const now = new Date().toISOString();
+    return {
+      id: `rf-${id}`,
+      release_request_id: id,
+      fdr_id: req?.fdr_id || 'fdr-001',
+      expected_amount: req?.principal_amount || 0,
+      received_amount: 0,
+      currency: 'INR',
+      refund_status: 'pending',
+      recorded_by: 'usr-fin-01',
+      transactions: [],
+      created_at: now,
+      updated_at: now,
+    };
+  }
+  return rec;
+}
+
+export async function recordRefundTransaction(
+  id: string,
+  payload: {
+    transaction_reference: string;
+    amount: number;
+    transaction_date?: string;
+    payment_mode: string;
+    utr_number?: string;
+    receipt_document_id?: string;
+  }
+): Promise<RefundTransaction> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/release-requests/${id}/refunds`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    const err = await res.json().catch(() => ({}));
+    if (err.detail) throw new Error(err.detail);
+  } catch (err: any) {
+    if (err.message && !err.message.includes('fetch')) throw err;
+  }
+
+  const refundRecords = getLocalOrInit(STORAGE_KEYS.REFUND_RECORDS, SEED_REFUND_RECORDS);
+  let rec = refundRecords.find((r) => r.release_request_id === id);
+  const now = new Date().toISOString();
+
+  if (!rec) {
+    const requests = getLocalOrInit(STORAGE_KEYS.RELEASE_REQUESTS, SEED_RELEASE_REQUESTS);
+    const req = requests.find((r) => r.id === id);
+    rec = {
+      id: `rf-${id}`,
+      release_request_id: id,
+      fdr_id: req?.fdr_id || 'fdr-001',
+      expected_amount: req?.principal_amount || payload.amount,
+      received_amount: 0,
+      currency: 'INR',
+      refund_status: 'pending',
+      recorded_by: 'usr-fin-01',
+      transactions: [],
+      created_at: now,
+      updated_at: now,
+    };
+    refundRecords.push(rec);
+  }
+
+  const newTx: RefundTransaction = {
+    id: `tx-${Date.now()}`,
+    refund_record_id: rec.id,
+    transaction_reference: payload.transaction_reference,
+    amount: payload.amount,
+    transaction_date: payload.transaction_date || now.split('T')[0],
+    payment_mode: payload.payment_mode,
+    utr_number: payload.utr_number,
+    receipt_document_id: payload.receipt_document_id,
+    recorded_by: 'usr-fin-01',
+    created_at: now,
+  };
+
+  if (!rec.transactions) rec.transactions = [];
+  rec.transactions.push(newTx);
+  rec.received_amount = (rec.received_amount || 0) + payload.amount;
+  if (rec.received_amount >= rec.expected_amount) {
+    rec.refund_status = 'received';
+  } else {
+    rec.refund_status = 'partially_received';
+  }
+  rec.updated_at = now;
+  saveLocal(STORAGE_KEYS.REFUND_RECORDS, refundRecords);
+
+  // Update request summary
+  const requests = getLocalOrInit(STORAGE_KEYS.RELEASE_REQUESTS, SEED_RELEASE_REQUESTS);
+  const req = requests.find((r) => r.id === id);
+  if (req) {
+    req.refund_status = rec.refund_status;
+    req.updated_at = now;
+    saveLocal(STORAGE_KEYS.RELEASE_REQUESTS, requests);
+  }
+
+  return newTx;
+}
+
+export async function reconcileRefund(
+  id: string,
+  payload: {
+    refund_status: string;
+    refund_reference?: string;
+    payment_mode?: string;
+    supporting_document_id?: string;
+  }
+): Promise<RefundRecord> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/release-requests/${id}/reconciliation`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    const err = await res.json().catch(() => ({}));
+    if (err.detail) throw new Error(err.detail);
+  } catch (err: any) {
+    if (err.message && !err.message.includes('fetch')) throw err;
+  }
+
+  const refundRecords = getLocalOrInit(STORAGE_KEYS.REFUND_RECORDS, SEED_REFUND_RECORDS);
+  const rec = refundRecords.find((r) => r.release_request_id === id);
+  if (!rec) throw new Error('Refund record not found.');
+
+  rec.refund_status = payload.refund_status as any;
+  if (payload.refund_reference) rec.refund_reference = payload.refund_reference;
+  if (payload.payment_mode) rec.payment_mode = payload.payment_mode;
+  rec.updated_at = new Date().toISOString();
+  saveLocal(STORAGE_KEYS.REFUND_RECORDS, refundRecords);
+
+  const requests = getLocalOrInit(STORAGE_KEYS.RELEASE_REQUESTS, SEED_RELEASE_REQUESTS);
+  const req = requests.find((r) => r.id === id);
+  if (req) {
+    req.refund_status = payload.refund_status as any;
+    req.updated_at = new Date().toISOString();
+    saveLocal(STORAGE_KEYS.RELEASE_REQUESTS, requests);
+  }
+
+  return rec;
+}
+
+export async function closeReleaseRequest(
+  id: string,
+  payload: {
+    closure_notes?: string;
+    closure_evidence_document_id?: string;
+  }
+): Promise<ReleaseClosureRecord> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/release-requests/${id}/close`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    const err = await res.json().catch(() => ({}));
+    if (err.detail) throw new Error(err.detail);
+  } catch (err: any) {
+    if (err.message && !err.message.includes('fetch')) throw err;
+  }
+
+  const requests = getLocalOrInit(STORAGE_KEYS.RELEASE_REQUESTS, SEED_RELEASE_REQUESTS);
+  const req = requests.find((r) => r.id === id);
+  if (!req) throw new Error(`Release request ${id} not found.`);
+
+  const now = new Date().toISOString();
+  req.request_status = 'closed';
+  req.updated_at = now;
+  saveLocal(STORAGE_KEYS.RELEASE_REQUESTS, requests);
+
+  // Transition FDR lifecycle status to closed
+  const fdrs = getLocalOrInit(STORAGE_KEYS.FDRS, SEED_FDRS);
+  const fdr = fdrs.find((f) => f.id === req.fdr_id);
+  if (fdr) {
+    fdr.lifecycle_status = 'closed';
+    saveLocal(STORAGE_KEYS.FDRS, fdrs);
+  }
+
+  const closures = getLocalOrInit(STORAGE_KEYS.RELEASE_CLOSURES, []);
+  const newClosure: ReleaseClosureRecord = {
+    id: `cls-${Date.now()}`,
+    release_request_id: id,
+    closure_status: 'closed',
+    reconciliation_status: 'reconciled',
+    reconciled_by: 'usr-fin-01',
+    reconciled_at: now,
+    closure_notes: payload.closure_notes || 'All statutory conditions verified, refund reconciled, and deposit lien discharged.',
+    closed_by: 'usr-admin-01',
+    closed_at: now,
+    created_at: now,
+  };
+  saveLocal(STORAGE_KEYS.RELEASE_CLOSURES, [newClosure, ...closures]);
+
+  return newClosure;
+}
+
+export async function fetchReleasePolicies(): Promise<ReleasePolicyVersion[]> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/admin/release-policies`, {
+      method: 'GET',
+      headers: { ...headers },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // Fallback
+  }
+  return getLocalOrInit(STORAGE_KEYS.RELEASE_POLICIES, SEED_RELEASE_POLICIES);
+}
+
+export async function createReleasePolicy(payload: any): Promise<ReleasePolicyVersion> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/admin/release-policies`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    const err = await res.json().catch(() => ({}));
+    if (err.detail) throw new Error(err.detail);
+  } catch (err: any) {
+    if (err.message && !err.message.includes('fetch')) throw err;
+  }
+
+  const policies = getLocalOrInit(STORAGE_KEYS.RELEASE_POLICIES, SEED_RELEASE_POLICIES);
+  const now = new Date().toISOString();
+  const newPol: ReleasePolicyVersion = {
+    id: `policy-rel-${Date.now()}`,
+    policy_name: payload.policy_name,
+    policy_version: payload.policy_version,
+    policy_description: payload.policy_description,
+    source_reference: payload.source_reference,
+    effective_from: payload.effective_from || now,
+    effective_until: payload.effective_until,
+    checklist_configuration: payload.checklist_configuration || [],
+    approval_configuration: payload.approval_configuration || { stages: [] },
+    is_active: payload.is_active !== false,
+    created_at: now,
+  };
+  saveLocal(STORAGE_KEYS.RELEASE_POLICIES, [...policies, newPol]);
+  return newPol;
+}
+
+export async function updateReleasePolicy(
+  policyId: string,
+  payload: any
+): Promise<ReleasePolicyVersion> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/admin/release-policies/${policyId}`, {
+      method: 'PATCH',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // Fallback
+  }
+
+  const policies = getLocalOrInit(STORAGE_KEYS.RELEASE_POLICIES, SEED_RELEASE_POLICIES);
+  const idx = policies.findIndex((p) => p.id === policyId);
+  if (idx === -1) throw new Error('Release policy not found.');
+
+  const updated = { ...policies[idx], ...payload };
+  policies[idx] = updated;
+  saveLocal(STORAGE_KEYS.RELEASE_POLICIES, policies);
+  return updated;
+}
+
+export async function activateReleasePolicy(policyId: string): Promise<ReleasePolicyVersion> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/admin/release-policies/${policyId}/activate`, {
+      method: 'POST',
+      headers: { ...headers },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // Fallback
+  }
+
+  const policies = getLocalOrInit(STORAGE_KEYS.RELEASE_POLICIES, SEED_RELEASE_POLICIES);
+  for (const p of policies) {
+    p.is_active = (p.id === policyId);
+  }
+  saveLocal(STORAGE_KEYS.RELEASE_POLICIES, policies);
+  const target = policies.find((p) => p.id === policyId);
+  if (!target) throw new Error('Policy not found.');
+  return target;
+}

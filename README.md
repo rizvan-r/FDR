@@ -1,7 +1,7 @@
 # FDR-Chain — Institutional Fixed Deposit Receipt (FDR) Management Portal
 
 **Smart India Hackathon 2026**  
-**Phase 7 Release: Legacy Data Migration & Compliance Document Management**
+**Phase 8 Release: FDR Release, Refund & Closure Management**
 
 ---
 
@@ -16,6 +16,7 @@
 - **Phase 5**: Governed Renewal Management, 6-Signal Deterministic Candidate Matching Engine, Independent Replacement FDR Trust Tier $\ge 2$ Enforcement, Strict Directed Acyclic Graph (DAG) Lineage with Cycle Detection, and End-to-End Visual Provenance Explorer.
 - **Phase 6**: Role-Aware Officer Dashboard, Centralized Priority Queue, 9-Signal Non-Destructive Priority Calculation Engine, Idempotent Task Synchronization across Phases 3–5, Task Lifecycle State Machine, Assignment & Comment Trails, Supervisory Multi-Stage Escalations, Staff Workload Dashboard, and In-App Officer Notifications.
 - **Phase 7**: Legacy Data Migration (Secure Openpyxl/CSV Spreadsheet Parsing, Heuristic Auto-Column Mapping Engine, Reusable Mapping Profiles, Row Review Quarantine & Strict Trust Tier 1 Invariant) and Compliance Document Management (6 Statutory AICTE Templates, SHA-256 Version Snapshots, Supervisory Review Workflow, ReportLab PDF Rendering & Mock Signature Demonstration with Mandatory Disclaimers).
+- **Phase 8**: FDR Release, Refund & Closure Management (Versioned Release Policy Engine, Multi-Tier Delegation Review, Mandatory Checklist Verification, Strict Self-Approval Restriction, Decoupled FDR Lifecycle State Management, Bank Release Instruction & Confirmation Sandbox Surveillance, Multi-Installment Refund Treasury Ledger & UTR Tracking, and Final Statutory Case Closure transitioning FDR to `'closed'`).
 
 ---
 
@@ -205,14 +206,22 @@ npm.cmd run dev
 ```
 *Frontend runs at `http://127.0.0.1:5173`.*
 
+### 4. Frontend Web Portal (React + Vite)
+```powershell
+cd frontend
+npm.cmd install
+npm.cmd run dev
+```
+*Frontend runs at `http://127.0.0.1:5173`.*
+
 ---
 
-## 🧪 Comprehensive Automated Test Suites (80/80 Passed)
+## 🧪 Comprehensive Automated Test Suites (93/93 Passed)
 
-Execute all 80 automated unit and integration tests across Phases 2, 3, 4, 5, 6, and 7 from PowerShell:
+Execute all 93 automated unit and integration tests across Phases 2, 3, 4, 5, 6, 7, and 8 from PowerShell:
 ```powershell
 cd backend
-python -m pytest test_phase2.py test_phase3.py test_phase4.py test_phase5.py test_phase6.py test_phase7.py -v
+python -m pytest test_phase2.py test_phase3.py test_phase4.py test_phase5.py test_phase6.py test_phase7.py test_phase8.py -v
 ```
 
 ### Test Coverage Highlights:
@@ -222,12 +231,16 @@ python -m pytest test_phase2.py test_phase3.py test_phase4.py test_phase5.py tes
 - **Phase 5 Tests (18/18 Passed)**: Renewal draft creation (`REN-YYYY-XXXX`), draft case editing, state immutability, cross-institution reference rejection, 6-signal candidate matching scoring & advisory guarantee verification, evidence upload and MIME type check, non-supervisory approval prevention, duplicate approval prevention, mandatory rejection justification, recursive DAG graph traversal, anti-reflexivity constraint, single predecessor invariant, cycle detection, isolated FDR handling, and dashboard metrics.
 - **Phase 6 Tests (16/16 Passed)**: Officer dashboard KPI aggregation, priority queue listing & dynamic multi-criteria filtering, full task detail hydration, 9-signal non-destructive priority scoring engine, idempotent task synchronization from Phases 3–5 with deduplication keying, task lifecycle state transitions (`open` $\to$ `in_progress` $\to$ `waiting` $\to$ `completed`), invariant separating review completion from underlying FDR approval, officer assignment and reassignment audit logging, invalid assignee rejection, collaborative comment threading, supervisory multi-stage escalation lifecycle (trigger $\to$ acknowledge $\to$ resolve with justification), officer notifications, staff workload metrics, admin queue policy CRUD, unauthorized policy update rejection, and cross-institution data isolation.
 - **Phase 7 Tests (13/13 Passed)**: Secure CSV & openpyxl XLSX upload without formula execution, unsupported file rejection, 0-byte file rejection, heuristic column mapping & field validation (negative amount detection, date format validation), row review quarantine & manual resolution, **Trust Tier 1 Invariant & import idempotency**, statutory template registry CRUD & RBAC enforcement, dynamic FDR token interpolation, immutable version snapshots with SHA-256 hash tracking, supervisory review workflow (`draft` $\to$ `under_review` $\to$ `approved`), and **mock digital e-signature demonstration with mandatory disclaimer**.
+- **Phase 8 Tests (13/13 Passed)**: Release policy version CRUD & activation, unauthorized policy creation prevention, release request creation & mandatory grounds validation, invalid FDR reference rejection, conflicting concurrent active request prevention, submit and cancellation lifecycle, regulatory officer checklist verification & unauthorized applicant audit rejection, mandatory checklist completion enforcement prior to approval, strict self-approval prohibition, supervisory return for correction & resubmission, full decoupled release lifecycle to final closure (Approval sanctions release without changing FDR standing $\to$ depository bank lien release confirmation transitions FDR to `'released'` $\to$ refund transaction recording & reconciliation $\to$ final case closure transitions FDR to `'closed'`), premature closure prevention, and release dashboard statistics aggregation.
 
 ---
 
 ## 📚 Technical Documentation Index
 
 Detailed architectural and developer guides are available in the [`docs/`](file:///i:/Richu/Projects/SIH/FDR/docs) directory:
+- [Phase 8 FDR Release, Refund & Closure Management](file:///i:/Richu/Projects/SIH/FDR/docs/PHASE_8_RELEASE_MANAGEMENT.md)
+- [Phase 8 REST API Reference](file:///i:/Richu/Projects/SIH/FDR/docs/PHASE_8_API.md)
+- [Phase 8 Automated Testing & Quality Assurance Report](file:///i:/Richu/Projects/SIH/FDR/docs/PHASE_8_TESTING.md)
 - [Phase 7 Legacy Data Migration Specification](file:///i:/Richu/Projects/SIH/FDR/docs/PHASE_7_MIGRATION.md)
 - [Phase 7 Compliance Document Management](file:///i:/Richu/Projects/SIH/FDR/docs/PHASE_7_COMPLIANCE_DOCUMENTS.md)
 - [Phase 7 REST API Specification](file:///i:/Richu/Projects/SIH/FDR/docs/PHASE_7_API.md)

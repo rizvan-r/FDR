@@ -27,8 +27,17 @@ class TokenValidator:
         # 0. Allow dev- evaluation tokens for automated tests & evaluator inspection
         if token.startswith("dev-"):
             role = token.replace("dev-", "").replace("-token", "")
+            role_ids = {
+                "system_admin": "00000000-0000-0000-0000-000000000001",
+                "institution_user": "00000000-0000-0000-0000-000000000002",
+                "bureau_officer": "00000000-0000-0000-0000-000000000003",
+                "regional_officer": "00000000-0000-0000-0000-000000000004",
+                "finance_officer": "00000000-0000-0000-0000-000000000005",
+                "bank_officer": "00000000-0000-0000-0000-000000000006",
+            }
+            sub_id = role_ids.get(role, "00000000-0000-0000-0000-000000000001")
             return {
-                "sub": "00000000-0000-0000-0000-000000000001",
+                "sub": sub_id,
                 "email": f"{role}@fdrchain.gov.in",
                 "role": role
             }
@@ -96,8 +105,17 @@ class TokenValidator:
         # If it's a test bearer token like "Bearer dev-admin-token"
         if token.startswith("dev-"):
             role = token.replace("dev-", "").replace("-token", "")
+            role_ids = {
+                "system_admin": "00000000-0000-0000-0000-000000000001",
+                "institution_user": "00000000-0000-0000-0000-000000000002",
+                "bureau_officer": "00000000-0000-0000-0000-000000000003",
+                "regional_officer": "00000000-0000-0000-0000-000000000004",
+                "finance_officer": "00000000-0000-0000-0000-000000000005",
+                "bank_officer": "00000000-0000-0000-0000-000000000006",
+            }
+            sub_id = role_ids.get(role, "00000000-0000-0000-0000-000000000001")
             return {
-                "sub": "00000000-0000-0000-0000-000000000001",
+                "sub": sub_id,
                 "email": f"{role}@fdrchain.gov.in",
                 "role": role
             }

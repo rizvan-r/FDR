@@ -148,7 +148,8 @@ export type FDRLifecycleStatus =
   | 'matured'
   | 'released'
   | 'invoked'
-  | 'renewed';
+  | 'renewed'
+  | 'closed';
 
 export type FDRVerificationStatus =
   | 'institution_declared'
@@ -965,6 +966,221 @@ export interface MockSignatureRecord {
   status: 'demonstration_only';
   disclaimer: string;
 }
+
+// ============================================================================
+// PHASE 8: FDR RELEASE, REFUND & CLOSURE MANAGEMENT TYPES
+// ============================================================================
+
+export type ReleaseRequestStatus =
+  | 'draft'
+  | 'submitted'
+  | 'preliminary_review'
+  | 'eligibility_review'
+  | 'finance_review'
+  | 'authority_review'
+  | 'returned_for_correction'
+  | 'approved'
+  | 'rejected'
+  | 'cancelled'
+  | 'release_initiated'
+  | 'bank_confirmed'
+  | 'closed';
+
+export type BankReleaseStatus =
+  | 'not_started'
+  | 'instruction_prepared'
+  | 'awaiting_bank'
+  | 'released'
+  | 'release_rejected'
+  | 'unconfirmed';
+
+export type RefundStatus =
+  | 'not_applicable'
+  | 'pending'
+  | 'partially_received'
+  | 'received'
+  | 'reconciliation_pending'
+  | 'reconciled'
+  | 'disputed';
+
+export type ChecklistItemStatus =
+  | 'pending'
+  | 'satisfied'
+  | 'not_satisfied'
+  | 'not_applicable'
+  | 'needs_clarification';
+
+export interface ReleasePolicyConfigItem {
+  key: string;
+  title: string;
+  description?: string;
+  is_required: boolean;
+}
+
+export interface ReleaseApprovalConfigStage {
+  stage: string;
+  role: string;
+  label: string;
+}
+
+export interface ReleasePolicyVersion {
+  id: string;
+  policy_name: string;
+  policy_version: string;
+  policy_description?: string;
+  source_reference: string;
+  effective_from: string;
+  effective_until?: string | null;
+  checklist_configuration: ReleasePolicyConfigItem[];
+  approval_configuration: {
+    stages: ReleaseApprovalConfigStage[];
+    require_separation_of_duties?: boolean;
+    allow_self_approval?: boolean;
+  };
+  is_active: boolean;
+  created_by?: string;
+  created_at: string;
+}
+
+export interface ReleaseChecklistItem {
+  id: string;
+  release_request_id: string;
+  policy_requirement_key: string;
+  requirement_title: string;
+  requirement_description?: string;
+  is_required: boolean;
+  review_status: ChecklistItemStatus;
+  evidence_document_id?: string | null;
+  reviewed_by?: string | null;
+  reviewed_at?: string | null;
+  review_comments?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ReleaseReviewItem {
+  id: string;
+  release_request_id: string;
+  review_stage: string;
+  reviewer_id: string;
+  reviewer_name?: string;
+  reviewer_role?: string;
+  review_decision: 'recommend_approval' | 'recommend_rejection' | 'return_for_correction' | 'approved' | 'rejected';
+  comments: string;
+  reviewed_at: string;
+  created_at: string;
+}
+
+export interface BankReleaseRecord {
+  id: string;
+  release_request_id: string;
+  fdr_id: string;
+  bank_id?: string | null;
+  bank_name?: string | null;
+  release_status: BankReleaseStatus;
+  instruction_reference?: string | null;
+  bank_reference?: string | null;
+  bank_confirmation_date?: string | null;
+  confirmation_method?: string | null;
+  evidence_document_id?: string | null;
+  confirmed_by?: string | null;
+  is_mock: boolean;
+  disclaimer: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RefundTransaction {
+  id: string;
+  refund_record_id: string;
+  transaction_reference: string;
+  amount: number;
+  transaction_date: string;
+  payment_mode: string;
+  utr_number?: string | null;
+  receipt_document_id?: string | null;
+  recorded_by: string;
+  created_at: string;
+}
+
+export interface RefundRecord {
+  id: string;
+  release_request_id: string;
+  fdr_id: string;
+  expected_amount: number;
+  received_amount: number;
+  currency: string;
+  refund_status: RefundStatus;
+  refund_reference?: string | null;
+  refund_date?: string | null;
+  payment_mode?: string | null;
+  supporting_document_id?: string | null;
+  recorded_by: string;
+  transactions?: RefundTransaction[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ReleaseClosureRecord {
+  id: string;
+  release_request_id: string;
+  closure_status: 'pending' | 'closed' | 'rejected';
+  reconciliation_status: 'reconciliation_pending' | 'reconciled' | 'waived' | 'disputed';
+  reconciled_by?: string | null;
+  reconciled_at?: string | null;
+  closure_notes?: string | null;
+  closure_evidence_document_id?: string | null;
+  closed_by?: string | null;
+  closed_at?: string | null;
+  created_at: string;
+}
+
+export interface ReleaseRequestSummary {
+  id: string;
+  request_number: string;
+  fdr_id: string;
+  fdr_number?: string;
+  principal_amount?: number;
+  bank_name?: string;
+  institution_id: string;
+  institution_name?: string;
+  requested_by: string;
+  request_reason: string;
+  request_status: ReleaseRequestStatus;
+  policy_version_id: string;
+  policy_version?: string;
+  submitted_at?: string | null;
+  current_reviewer_id?: string | null;
+  final_decision_by?: string | null;
+  final_decision_at?: string | null;
+  decision_comments?: string | null;
+  bank_release_status?: BankReleaseStatus;
+  refund_status?: RefundStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ReleaseRequestDetail extends ReleaseRequestSummary {
+  fdr_details?: Record<string, any>;
+  policy_details?: ReleasePolicyVersion;
+  checklist_items: ReleaseChecklistItem[];
+  reviews: ReleaseReviewItem[];
+  bank_release?: BankReleaseRecord;
+  refund_record?: RefundRecord;
+  closure_record?: ReleaseClosureRecord;
+}
+
+export interface ReleaseDashboardStats {
+  total_requests: number;
+  draft_count: number;
+  under_review_count: number;
+  approved_count: number;
+  bank_release_pending: number;
+  refund_pending: number;
+  closed_count: number;
+  total_released_amount: number;
+}
+
 
 
 

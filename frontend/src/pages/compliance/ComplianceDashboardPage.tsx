@@ -76,7 +76,7 @@ export const ComplianceDashboardPage: React.FC = () => {
         <div>
           <div className="flex items-center gap-2 mb-1.5">
             <span className="px-2.5 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
-              Phase 7 Module
+              Compliance Documents
             </span>
             <span className="px-2.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
               Statutory Letter & Notice Engine

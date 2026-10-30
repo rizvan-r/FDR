@@ -156,7 +156,7 @@ export const ResetPasswordPage: React.FC = () => {
       </div>
 
       <div className="py-3 text-center text-xs text-gov-muted border-t border-gov-border bg-white">
-        FDR-Chain Portal • Phase 1
+        FDR-Chain Portal • Secure Password Recovery
       </div>
     </div>
   );

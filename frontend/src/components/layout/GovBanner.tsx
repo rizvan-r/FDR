@@ -23,7 +23,7 @@ export const GovBanner: React.FC = () => {
                 भारत सरकार | Government of India
               </div>
               <div className="text-[10px] text-gray-400">
-                Smart India Hackathon 2026 — Institutional Security Deposit Oversight
+                Institutional Security Deposit & FDR Central Oversight System
               </div>
             </div>
           </div>
@@ -35,7 +35,7 @@ export const GovBanner: React.FC = () => {
             Govt. High-Security Portal (TLS 1.3 / Supabase RLS Protected)
           </span>
           <span className="text-gray-400">|</span>
-          <span className="font-mono text-gray-300">v1.0 (Phase 1)</span>
+          <span className="font-mono text-gray-300">v8.0 (National Portal)</span>
         </div>
       </div>
     </div>

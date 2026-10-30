@@ -158,7 +158,7 @@ export const MockBankPortalPage: React.FC = () => {
             <div className="font-bold flex items-center gap-2 text-indigo-900">
               <span>Simulated Commercial Bank Integration Environment</span>
               <span className="px-2 py-0.5 text-[10px] uppercase font-bold rounded bg-indigo-200 text-indigo-900">
-                Phase 3 Prototype
+                Bank Simulation Sandbox
               </span>
             </div>
             <p className="mt-0.5 text-indigo-800 leading-relaxed text-[11px]">

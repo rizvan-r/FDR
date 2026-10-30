@@ -70,7 +70,7 @@ export const LoginPage: React.FC = () => {
             <span className="text-[10px] text-gray-400">Institutional Security Deposit Oversight</span>
           </div>
           <span className="text-[11px] text-[#D4AF37] font-semibold">
-            Smart India Hackathon 2026
+            All India Council for Technical Education (AICTE)
           </span>
         </div>
       </div>
@@ -196,7 +196,7 @@ export const LoginPage: React.FC = () => {
               </div>
             </form>
 
-            {/* SIH 2026 Test & Evaluation Helper Panel */}
+            {/* Quick Persona Access Panel */}
             <div className="bg-gray-50 border-t border-gov-border p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-gov-navy flex items-center gap-1.5">
@@ -290,7 +290,7 @@ export const LoginPage: React.FC = () => {
 
       {/* Institutional Bottom Disclaimer */}
       <div className="py-3 text-center text-xs text-gov-muted border-t border-gov-border bg-white">
-        Designed for Smart India Hackathon 2026 • Government Security Deposit FDR Digital Governance
+        FDR-Chain Portal • All India Council for Technical Education (AICTE) • National Statutory Portal
       </div>
     </div>
   );

@@ -57,7 +57,7 @@ export const OfficerDashboardPage: React.FC = () => {
         <div>
           <div className="flex items-center gap-2">
             <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-200">
-              Phase 6 Enterprise
+              Supervisory Operations
             </span>
             <span className="text-xs text-slate-500 font-mono">Government Operations Desk</span>
           </div>

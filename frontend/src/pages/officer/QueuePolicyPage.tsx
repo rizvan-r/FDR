@@ -199,7 +199,7 @@ export const QueuePolicyPage: React.FC = () => {
           <div>
             <div className="flex items-center gap-2 text-xs font-semibold text-purple-700 uppercase tracking-wider">
               <Sliders className="w-4 h-4 text-purple-600" />
-              <span>Phase 6 Administrator Control</span>
+              <span>Administrator Policy Engine</span>
             </div>
             <h1 className="text-2xl font-bold text-gov-navy mt-1">Queue & Priority Policy Settings</h1>
             <p className="text-sm text-gov-muted mt-0.5">

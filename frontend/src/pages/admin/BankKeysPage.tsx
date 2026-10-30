@@ -114,7 +114,7 @@ export const BankKeysPage: React.FC = () => {
         <div>
           <div className="flex items-center gap-2">
             <span className="px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase bg-[#12345A]/10 text-gov-navy rounded">
-              Phase 3 Cryptography
+              Public Key Infrastructure
             </span>
             <span className="text-xs text-gov-muted font-medium">Asymmetric Public Key Registry</span>
           </div>

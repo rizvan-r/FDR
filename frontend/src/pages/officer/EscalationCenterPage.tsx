@@ -158,7 +158,7 @@ export const EscalationCenterPage: React.FC = () => {
           <div>
             <div className="flex items-center gap-2 text-xs font-semibold text-rose-700 uppercase tracking-wider">
               <ShieldAlert className="w-4 h-4 text-rose-600" />
-              <span>Phase 6 Supervisory Command</span>
+              <span>Supervisory Command</span>
             </div>
             <h1 className="text-2xl font-bold text-gov-navy mt-1">Escalation Command Center</h1>
             <p className="text-sm text-gov-muted mt-0.5">

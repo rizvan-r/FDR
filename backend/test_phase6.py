@@ -13,6 +13,7 @@ client = TestClient(app)
 
 @pytest.fixture(autouse=True)
 def setup_auth_override():
+    original = token_validator.verify_token
     # Default admin user override
     async def override_verify_token(token: str):
         if token == "invalid":
@@ -23,6 +24,8 @@ def setup_auth_override():
             "role": "system_admin"
         }
     token_validator.verify_token = override_verify_token
+    yield
+    token_validator.verify_token = original
 
 def test_officer_dashboard_stats():
     response = client.get(

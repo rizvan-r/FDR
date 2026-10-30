@@ -24,6 +24,14 @@ import {
   QueuePolicy,
   OfficerWorkloadSummary,
   OfficerDashboardStats,
+  MigrationBatchDetail,
+  MigrationBatchSummary,
+  MigrationMappingProfile,
+  ComplianceTemplate,
+  ComplianceDocument,
+  ComplianceDocumentVersion,
+  DocumentReview,
+  MockSignatureRecord,
 } from '../types';
 
 export const SEED_REGIONS: Region[] = [
@@ -1569,5 +1577,508 @@ export const SEED_OFFICER_DASHBOARD_STATS: OfficerDashboardStats = {
     { time: '1d ago', action: 'Heartbeat Check Overdue', user: 'APScheduler Worker', fdr: 'FDR-2026-CPWD-10294' }
   ],
 };
+
+// =============================================================================
+// PHASE 7: SEED DATA (MIGRATION & COMPLIANCE)
+// =============================================================================
+
+export const SEED_MIGRATION_PROFILES: MigrationMappingProfile[] = [
+  {
+    id: 'profile-001',
+    profile_name: 'AICTE Standard Legacy Column Profile',
+    institution_id: undefined,
+    column_mapping: {
+      'Institution Name': 'institution_name',
+      'Bank Name': 'bank_name',
+      'Branch': 'branch_name',
+      'FDR No': 'fdr_number',
+      'Deposit Amount': 'amount',
+      'Currency': 'currency',
+      'Date of Issue': 'issue_date',
+      'Date of Maturity': 'maturity_date',
+      'Interest Rate': 'interest_rate',
+      'Lien In Favour': 'lien_in_favour',
+      'Remarks': 'remarks',
+    },
+    created_at: '2026-01-15T10:00:00Z',
+  },
+  {
+    id: 'profile-002',
+    profile_name: 'State Bank Commercial Legacy Layout',
+    institution_id: undefined,
+    column_mapping: {
+      'Beneficiary Inst': 'institution_name',
+      'Issuer Bank': 'bank_name',
+      'Branch Office': 'branch_name',
+      'Deposit Receipt No': 'fdr_number',
+      'Principal Amount': 'amount',
+      'Origination Date': 'issue_date',
+      'Expiry Date': 'maturity_date',
+      'Annual Yield %': 'interest_rate',
+      'Lien Holder': 'lien_in_favour',
+    },
+    created_at: '2026-01-16T12:00:00Z',
+  },
+];
+
+export const SEED_MIGRATION_BATCHES: MigrationBatchDetail[] = [
+  {
+    id: 'batch-001',
+    institution_id: 'inst-01',
+    institution_name: 'National Highways Authority of India',
+    uploaded_by: 'usr-admin-01',
+    file_name: 'AICTE_Western_Legacy_Deposits_2025.csv',
+    file_type: 'csv',
+    batch_status: 'review_required',
+    total_rows: 5,
+    valid_rows: 3,
+    invalid_rows: 2,
+    imported_rows: 0,
+    skipped_rows: 0,
+    created_at: '2026-02-10T11:30:00Z',
+    headers: ['Institution Name', 'Bank Name', 'Branch', 'FDR No', 'Deposit Amount', 'Currency', 'Date of Issue', 'Date of Maturity', 'Interest Rate', 'Lien In Favour', 'Remarks'],
+    mappings: [
+      { source_column: 'Institution Name', target_field: 'institution_name', confidence: 1.0 },
+      { source_column: 'Bank Name', target_field: 'bank_name', confidence: 1.0 },
+      { source_column: 'Branch', target_field: 'branch_name', confidence: 0.9 },
+      { source_column: 'FDR No', target_field: 'fdr_number', confidence: 1.0 },
+      { source_column: 'Deposit Amount', target_field: 'amount', confidence: 1.0 },
+      { source_column: 'Currency', target_field: 'currency', confidence: 1.0 },
+      { source_column: 'Date of Issue', target_field: 'issue_date', confidence: 1.0 },
+      { source_column: 'Date of Maturity', target_field: 'maturity_date', confidence: 1.0 },
+      { source_column: 'Interest Rate', target_field: 'interest_rate', confidence: 1.0 },
+      { source_column: 'Lien In Favour', target_field: 'lien_in_favour', confidence: 1.0 },
+      { source_column: 'Remarks', target_field: 'remarks', confidence: 0.8 },
+    ],
+    preview_data: [
+      {
+        'Institution Name': 'National Highways Authority of India',
+        'Bank Name': 'State Bank of India',
+        'Branch': 'SBI Main',
+        'FDR No': 'MIG-W-2025-001',
+        'Deposit Amount': '5000000',
+        'Currency': 'INR',
+        'Date of Issue': '2025-01-10',
+        'Date of Maturity': '2026-01-10',
+        'Interest Rate': '7.1',
+        'Lien In Favour': 'AICTE',
+        'Remarks': 'Legacy NHAI Package 1',
+      },
+      {
+        'Institution Name': 'National Highways Authority of India',
+        'Bank Name': 'Punjab National Bank',
+        'Branch': 'PNB CP',
+        'FDR No': 'MIG-W-2025-002',
+        'Deposit Amount': '-15000',
+        'Currency': 'INR',
+        'Date of Issue': '2025-02-15',
+        'Date of Maturity': '2026-02-15',
+        'Interest Rate': '6.9',
+        'Lien In Favour': 'AICTE',
+        'Remarks': 'Typo negative amount',
+      },
+    ],
+    rows: [
+      {
+        id: 'row-batch-001-1',
+        batch_id: 'batch-001',
+        row_number: 1,
+        source_data: { 'FDR No': 'MIG-W-2025-001', 'Deposit Amount': '5000000', 'Date of Issue': '2025-01-10', 'Date of Maturity': '2026-01-10' },
+        normalized_data: { fdr_number: 'MIG-W-2025-001', amount: 5000000, currency: 'INR', issue_date: '2025-01-10', maturity_date: '2026-01-10', interest_rate: 7.1 },
+        validation_status: 'valid',
+        validation_errors: [],
+        duplicate_candidates: [],
+        matched_institution_name: 'National Highways Authority of India',
+        matched_bank_name: 'State Bank of India',
+      },
+      {
+        id: 'row-batch-001-2',
+        batch_id: 'batch-001',
+        row_number: 2,
+        source_data: { 'FDR No': 'MIG-W-2025-002', 'Deposit Amount': '-15000', 'Date of Issue': '2025-02-15', 'Date of Maturity': '2026-02-15' },
+        normalized_data: { fdr_number: 'MIG-W-2025-002', amount: -15000, currency: 'INR', issue_date: '2025-02-15', maturity_date: '2026-02-15' },
+        validation_status: 'invalid',
+        validation_errors: [{ field: 'amount', message: 'Deposit amount must be strictly greater than zero.' }],
+        duplicate_candidates: [],
+        matched_institution_name: 'National Highways Authority of India',
+        matched_bank_name: 'Punjab National Bank',
+      },
+      {
+        id: 'row-batch-001-3',
+        batch_id: 'batch-001',
+        row_number: 3,
+        source_data: { 'FDR No': 'FDR-2026-NHAI-84920', 'Deposit Amount': '15000000', 'Date of Issue': '2026-01-15', 'Date of Maturity': '2027-01-15' },
+        normalized_data: { fdr_number: 'FDR-2026-NHAI-84920', amount: 15000000, currency: 'INR', issue_date: '2026-01-15', maturity_date: '2027-01-15' },
+        validation_status: 'duplicate_exact',
+        validation_errors: [{ field: 'fdr_number', message: 'FDR number FDR-2026-NHAI-84920 already exists in Central Vault.' }],
+        duplicate_candidates: [{ fdr_id: 'fdr-001', fdr_number: 'FDR-2026-NHAI-84920', reason: 'Exact FDR number match', is_exact: true }],
+        matched_institution_name: 'National Highways Authority of India',
+        matched_bank_name: 'State Bank of India',
+      },
+      {
+        id: 'row-batch-001-4',
+        batch_id: 'batch-001',
+        row_number: 4,
+        source_data: { 'FDR No': 'MIG-W-2025-004', 'Deposit Amount': '2000000', 'Date of Issue': '2025-03-01', 'Date of Maturity': '2026-03-01' },
+        normalized_data: { fdr_number: 'MIG-W-2025-004', amount: 2000000, currency: 'INR', issue_date: '2025-03-01', maturity_date: '2026-03-01' },
+        validation_status: 'valid',
+        validation_errors: [],
+        duplicate_candidates: [],
+        matched_institution_name: 'National Highways Authority of India',
+        matched_bank_name: 'Canara Bank',
+      },
+      {
+        id: 'row-batch-001-5',
+        batch_id: 'batch-001',
+        row_number: 5,
+        source_data: { 'FDR No': 'MIG-W-2025-005', 'Deposit Amount': '3500000', 'Date of Issue': '2025-04-01', 'Date of Maturity': '2026-04-01' },
+        normalized_data: { fdr_number: 'MIG-W-2025-005', amount: 3500000, currency: 'INR', issue_date: '2025-04-01', maturity_date: '2026-04-01' },
+        validation_status: 'valid',
+        validation_errors: [],
+        duplicate_candidates: [],
+        matched_institution_name: 'National Highways Authority of India',
+        matched_bank_name: 'Bank of Baroda',
+      },
+    ],
+  },
+  {
+    id: 'batch-002',
+    institution_id: 'inst-01',
+    institution_name: 'National Highways Authority of India',
+    uploaded_by: 'usr-admin-01',
+    file_name: 'NHAI_Northern_Package_Migration_Q1.xlsx',
+    file_type: 'xlsx',
+    batch_status: 'completed',
+    total_rows: 3,
+    valid_rows: 3,
+    invalid_rows: 0,
+    imported_rows: 3,
+    skipped_rows: 0,
+    created_at: '2026-01-20T09:15:00Z',
+    completed_at: '2026-01-20T09:20:00Z',
+    headers: ['FDR No', 'Deposit Amount', 'Currency', 'Date of Issue', 'Date of Maturity'],
+    mappings: [],
+    preview_data: [],
+  },
+];
+
+export const SEED_COMPLIANCE_TEMPLATES: ComplianceTemplate[] = [
+  {
+    id: 'template-001',
+    template_name: 'Statutory FDR Deposit Confirmation Letter',
+    template_type: 'fdr_confirmation',
+    description: 'Standard acknowledgment letter issued by AICTE to confirm receipt, registration, and pending custody of an institutional Fixed Deposit Receipt.',
+    template_content: `ALL INDIA COUNCIL FOR TECHNICAL EDUCATION
+Nelson Mandela Marg, Vasant Kunj, New Delhi - 110070
+Web: www.aicte-india.org | FDR Central Governance Portal
+
+Reference No: {{reference_number}}
+Date: {{generated_date}}
+
+To,
+The Principal / Director / Authorized Officer
+{{institution_name}} (Code: {{institution_code}})
+{{institution_address}}
+
+Subject: Official Acknowledgment & Registration of Fixed Deposit Receipt No. {{fdr_number}}
+
+Sir / Madam,
+
+This is to formally confirm that the All India Council for Technical Education (AICTE) has received and officially registered the Fixed Deposit Receipt (FDR) detailed hereunder for statutory regulatory compliance and lien custody:
+
+  • FDR Identification Number : {{fdr_number}}
+  • Issuing Commercial Bank   : {{bank_name}}
+  • Operating Branch & IFSC    : {{branch_name}} ({{ifsc_code}})
+  • Deposit Principal Amount   : {{currency}} {{amount}}
+  • Date of Issuance           : {{issue_date}}
+  • Statutory Maturity Date    : {{maturity_date}}
+  • Lien Registered In Favour  : {{lien_in_favour}}
+
+STATUTORY DIRECTIVE & INVARIANT CONDITIONS:
+1. The subject deposit remains irrevocably encumbered in favour of AICTE. The issuing bank has been instructed that under no circumstances may this deposit be encashed, premature-liquidated, or pledged elsewhere without written consent from AICTE.
+2. The depositor institution is hereby instructed to monitor maturity and initiate mandatory renewal at least 60 days prior to the maturity date.
+3. This certificate has been issued through the automated FDR-Chain Central Vault and is cryptographically hashed for audit verification.
+
+Yours faithfully,
+
+For All India Council for Technical Education,
+Authorized Supervisory Officer / Director (Approval Bureau)`,
+    version: 1,
+    is_active: true,
+    created_at: '2026-01-15T09:00:00Z',
+    updated_at: '2026-01-15T09:00:00Z',
+  },
+  {
+    id: 'template-002',
+    template_name: 'Notice of Discrepancy & CBS Reconciliation Inquiry',
+    template_type: 'fdr_discrepancy_inquiry',
+    description: 'Formal regulatory notice issued when commercial bank heartbeat returns broken lien, amount variance, or maturity mismatch against institutional declarations.',
+    template_content: `ALL INDIA COUNCIL FOR TECHNICAL EDUCATION
+APPROVAL BUREAU & VIGILANCE CELL
+Nelson Mandela Marg, Vasant Kunj, New Delhi - 110070
+
+CONFIDENTIAL & TIME-BOUND NOTICE
+Reference No: {{reference_number}}
+Date: {{generated_date}}
+
+To,
+The Head of Institution / Authorized Signatory
+{{institution_name}}
+
+Copy to: The Branch Manager, {{bank_name}}, {{branch_name}}
+
+Subject: NOTICE OF IRREGULARITY / DISCREPANCY IN FDR NO. {{fdr_number}}
+
+WHEREAS, {{institution_name}} declared deposit receipt {{fdr_number}} for {{currency}} {{amount}} with stated maturity {{maturity_date}} as regulatory collateral under the AICTE Approval Process Handbook;
+
+AND WHEREAS, automated Core Banking System (CBS) audit and heartbeat verification conducted on {{generated_date}} flagged the following discrepancies:
+  - Discrepancy Flag: Stale or unacknowledged lien registration on core banking record.
+  - Risk Classification: HIGH / REGULATORY ATTENTION.
+
+NOW THEREFORE, you are hereby called upon to show cause within SEVEN (7) WORKING DAYS from the receipt of this notice why regulatory action, including suspension of approval or encashment of alternative collateral, should not be initiated.
+
+A comprehensive reconciliation certificate with branch seal must be uploaded directly to the FDR-Chain portal.
+
+By Order of the Competent Authority,
+Member Secretary / Regional Officer, AICTE`,
+    version: 1,
+    is_active: true,
+    created_at: '2026-01-15T09:00:00Z',
+    updated_at: '2026-01-15T09:00:00Z',
+  },
+  {
+    id: 'template-003',
+    template_name: 'Regulatory Directorate Audit Summons',
+    template_type: 'directorate_audit_summons',
+    description: 'Statutory hearing summons directing institution leadership to appear with original collateral documents for discrepancy adjudication.',
+    template_content: `ALL INDIA COUNCIL FOR TECHNICAL EDUCATION
+DIRECTORATE OF REGULATORY ENFORCEMENT
+Nelson Mandela Marg, Vasant Kunj, New Delhi - 110070
+
+SUMMONS FOR PERSONAL HEARING & ORIGINAL RECORDS INQUIRY
+Reference No: {{reference_number}}
+Date: {{generated_date}}
+
+To:
+The Chairman / Secretary / Principal,
+{{institution_name}}
+
+In the matter of: Regulatory Collateral Verification for FDR No. {{fdr_number}}
+
+WHEREAS an inquiry into the statutory collateral of {{institution_name}} has revealed material non-compliance with the Approval Process Handbook;
+
+YOU ARE HEREBY REQUIRED to appear in person before the Standing Hearing Committee (SHC) at the AICTE Headquarters, New Delhi, or via designated video conference on the appointed date and time, to be notified separately, and produce:
+1. Original FDR Receipt No. {{fdr_number}} issued by {{bank_name}}.
+2. Written lien acknowledgment confirmation issued by the Bank Nodal Officer.
+3. Complete institutional audit ledger for the relevant financial year.
+
+TAKE NOTICE that in default of your appearance, the Committee may proceed ex-parte and recommend revocation of approval.
+
+Director (Legal & Enforcement), AICTE`,
+    version: 1,
+    is_active: true,
+    created_at: '2026-01-15T09:00:00Z',
+    updated_at: '2026-01-15T09:00:00Z',
+  },
+  {
+    id: 'template-004',
+    template_name: 'Statutory Maturity & Timely Renewal Intimation',
+    template_type: 'maturity_intimation',
+    description: 'Pre-maturity reminder letter dispatched to depositor institutions and banks 60/30/15 days prior to statutory expiration.',
+    template_content: `ALL INDIA COUNCIL FOR TECHNICAL EDUCATION
+FINANCE & DEPOSIT MONITORING DESK
+Nelson Mandela Marg, Vasant Kunj, New Delhi - 110070
+
+MANDATORY TIMELY RENEWAL INTIMATION
+Reference No: {{reference_number}}
+Date: {{generated_date}}
+
+To:
+The Director / Principal, {{institution_name}}
+Issuing Bank: {{bank_name}}, {{branch_name}}
+
+Subject: Advance Intimation of Impending Maturity for Security FDR No. {{fdr_number}}
+
+Sir / Madam,
+
+This is an advance statutory notification that Fixed Deposit Receipt No. {{fdr_number}} for {{currency}} {{amount}} pledged to AICTE is scheduled to mature on:
+
+    STATUTORY MATURITY DATE: {{maturity_date}}
+
+In accordance with AICTE Approval Process Regulations:
+1. The institution must execute a seamless rollover or replacement FDR for an equal or higher principal amount.
+2. The renewed FDR must be registered in the FDR-Chain portal through the Renewal Desk before {{maturity_date}}.
+3. Failure to effect timely renewal will automatically trigger automated Broken/Stale alerts and result in an officer priority compliance task.
+
+Deposit Lineage Tracking ID: LIN-{{fdr_number}}
+Portal Renewal Desk: https://fdrchain.gov.in/renewals
+
+Advisor (Finance), AICTE`,
+    version: 1,
+    is_active: true,
+    created_at: '2026-01-15T09:00:00Z',
+    updated_at: '2026-01-15T09:00:00Z',
+  },
+  {
+    id: 'template-005',
+    template_name: 'FDR Lineage & Substitution Certificate',
+    template_type: 'lineage_attestation',
+    description: 'Official certificate evidencing historical lineage, replacement pedigree, and predecessor collateral continuity.',
+    template_content: `ALL INDIA COUNCIL FOR TECHNICAL EDUCATION
+CENTRAL FDR VAULT REGISTRY
+Nelson Mandela Marg, Vasant Kunj, New Delhi - 110070
+
+CERTIFICATE OF COLLATERAL LINEAGE & DEPOSIT CONTINUITY
+Reference No: {{reference_number}}
+Date: {{generated_date}}
+
+THIS IS TO CERTIFY that pursuant to approved Renewal Case under the AICTE FDR-Chain Protocol, the following deposit substitution is formally recorded in the national immutable ledger:
+
+PREDECESSOR COLLATERAL RECORD:
+  • Predecessor FDR Number : {{fdr_number}}
+  • Issuing Commercial Bank: {{bank_name}}
+  • Collateral Amount     : {{currency}} {{amount}}
+
+ACTIVE SUCCESSOR RECORD:
+  • Successor Institution  : {{institution_name}}
+  • Succession Pedigree    : Verified Chain of Title (Generation Continuity)
+  • Legal Status           : Continuous Lien In Favour of AICTE
+
+This certificate serves as official proof that collateral security has remained unbroken without interruption in statutory coverage.
+
+Registrar / Senior Administrative Officer, AICTE`,
+    version: 1,
+    is_active: true,
+    created_at: '2026-01-15T09:00:00Z',
+    updated_at: '2026-01-15T09:00:00Z',
+  },
+  {
+    id: 'template-006',
+    template_name: 'Preliminary Lien Release & Clearance Order',
+    template_type: 'lien_release_preliminary',
+    description: 'Preliminary release clearance intimating bank and depositor of eligible statutory closure subject to final authority audit.',
+    template_content: `ALL INDIA COUNCIL FOR TECHNICAL EDUCATION
+Nelson Mandela Marg, Vasant Kunj, New Delhi - 110070
+
+PRELIMINARY COLLATERAL RELEASE CLEARANCE ORDER
+Reference No: {{reference_number}}
+Date: {{generated_date}}
+
+To:
+The Branch Manager, {{bank_name}}, {{branch_name}}
+Beneficiary: {{institution_name}}
+
+Subject: Preliminary Lien Release Clearance for FDR No. {{fdr_number}}
+
+WHEREAS, {{institution_name}} has fulfilled statutory curriculum obligations and completed statutory closure review in accordance with Council directives;
+
+IT IS HEREBY DECLARED that AICTE raises no objection to the preliminary release of lien on Fixed Deposit Receipt No. {{fdr_number}} for {{currency}} {{amount}}, subject to final audit settlement and verification of outstanding student dues.
+
+This clearance is an interim administrative sanction under Phase 7 Governance. Formal release execution and settlement will proceed in accordance with statutory closure guidelines.
+
+By Order of the Executive Committee,
+Advisor (Approval), AICTE`,
+    version: 1,
+    is_active: true,
+    created_at: '2026-01-15T09:00:00Z',
+    updated_at: '2026-01-15T09:00:00Z',
+  },
+];
+
+export const SEED_COMPLIANCE_DOCUMENTS: ComplianceDocument[] = [
+  {
+    id: 'doc-001',
+    template_id: 'template-001',
+    template_name: 'Statutory FDR Deposit Confirmation Letter',
+    template_type: 'fdr_confirmation',
+    institution_id: 'inst-01',
+    institution_name: 'National Highways Authority of India',
+    fdr_id: 'fdr-001',
+    fdr_number: 'FDR-2026-NHAI-84920',
+    document_title: 'Official Deposit Confirmation - NHAI Package 1',
+    reference_number: 'AICTE/FDR/2026/CONF-00192',
+    content_text: `ALL INDIA COUNCIL FOR TECHNICAL EDUCATION
+Nelson Mandela Marg, Vasant Kunj, New Delhi - 110070
+
+Reference No: AICTE/FDR/2026/CONF-00192
+Date: 15 January 2026
+
+To: National Highways Authority of India (INST-NHAI)
+Subject: Official Acknowledgment & Registration of FDR No. FDR-2026-NHAI-84920
+
+This confirms receipt and registration of INR 15,000,000 issued by State Bank of India.`,
+    current_version: 1,
+    document_status: 'signed',
+    created_by: 'usr-admin-01',
+    finalized_pdf_path: 'compliance/doc-001/final.pdf',
+    finalized_pdf_hash: '9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b',
+    finalized_at: '2026-01-16T10:00:00Z',
+    mock_signature_id: 'sig-001',
+    mock_signature: {
+      id: 'sig-001',
+      document_id: 'doc-001',
+      signer_display_name: 'Dr. Rajeshwar Sharma (System Administrator)',
+      signature_reference: 'MOCK-SIG-84920-AICTE',
+      signed_at: '2026-01-16T10:05:00Z',
+      status: 'demonstration_only',
+      disclaimer: 'DEMO — NOT A LEGALLY VALID DIGITAL SIGNATURE',
+    },
+    created_at: '2026-01-15T09:30:00Z',
+    updated_at: '2026-01-16T10:05:00Z',
+  },
+  {
+    id: 'doc-002',
+    template_id: 'template-004',
+    template_name: 'Statutory Maturity & Timely Renewal Intimation',
+    template_type: 'maturity_intimation',
+    institution_id: 'inst-02',
+    institution_name: 'Central Public Works Department',
+    fdr_id: 'fdr-002',
+    fdr_number: 'FDR-2025-CPWD-11029',
+    document_title: 'Maturity Intimation - CPWD Regional Road Deposit',
+    reference_number: 'AICTE/FDR/2026/MAT-00481',
+    content_text: `ALL INDIA COUNCIL FOR TECHNICAL EDUCATION
+FINANCE & DEPOSIT MONITORING DESK
+
+Reference No: AICTE/FDR/2026/MAT-00481
+Date: 20 February 2026
+
+To: Central Public Works Department (INST-CPWD)
+Subject: Advance Intimation of Impending Maturity for FDR No. FDR-2025-CPWD-11029
+
+Deposit is scheduled to mature on 2026-11-20. Initiate rollover immediately.`,
+    current_version: 2,
+    document_status: 'submitted_for_review',
+    created_by: 'usr-admin-01',
+    created_at: '2026-02-20T11:00:00Z',
+    updated_at: '2026-02-21T09:30:00Z',
+  },
+  {
+    id: 'doc-003',
+    template_id: 'template-002',
+    template_name: 'Notice of Discrepancy & CBS Reconciliation Inquiry',
+    template_type: 'fdr_discrepancy_inquiry',
+    institution_id: 'inst-04',
+    institution_name: 'Defence Research and Development Organisation',
+    fdr_id: 'fdr-004',
+    fdr_number: 'FDR-2025-DRDO-77291',
+    document_title: 'Notice of Discrepancy - Canara Bank Stale Record',
+    reference_number: 'AICTE/FDR/2026/DISC-00084',
+    content_text: `ALL INDIA COUNCIL FOR TECHNICAL EDUCATION
+APPROVAL BUREAU & VIGILANCE CELL
+
+Reference No: AICTE/FDR/2026/DISC-00084
+Date: 25 February 2026
+
+To: Defence Research and Development Organisation
+Notice of Broken/Stale Status on CBS core ledger. Submit reconciliation certificate within 7 days.`,
+    current_version: 1,
+    document_status: 'draft',
+    created_by: 'usr-bureau-01',
+    created_at: '2026-02-25T14:15:00Z',
+    updated_at: '2026-02-25T14:15:00Z',
+  },
+];
+
 
 

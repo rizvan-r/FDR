@@ -785,4 +785,186 @@ export interface OfficerDashboardStats {
   }>;
 }
 
+// =============================================================================
+// PHASE 7: LEGACY MIGRATION & COMPLIANCE DOCUMENTS
+// =============================================================================
+
+export type MigrationBatchStatus =
+  | 'uploaded'
+  | 'mapping'
+  | 'validating'
+  | 'review_required'
+  | 'ready'
+  | 'importing'
+  | 'completed'
+  | 'cancelled';
+
+export type MigrationRowValidationStatus =
+  | 'pending'
+  | 'valid'
+  | 'invalid'
+  | 'duplicate_exact'
+  | 'duplicate_fuzzy'
+  | 'reviewed'
+  | 'excluded'
+  | 'imported'
+  | 'failed';
+
+export interface ColumnMappingItem {
+  source_column: string;
+  target_field: string;
+  confidence?: number;
+  sample_value?: string;
+}
+
+export interface ColumnMappingRequest {
+  mappings: ColumnMappingItem[];
+  save_as_profile?: string;
+}
+
+export interface MigrationRowItem {
+  id: string;
+  batch_id: string;
+  row_number: number;
+  source_data: Record<string, any>;
+  normalized_data: Record<string, any>;
+  validation_status: MigrationRowValidationStatus;
+  validation_errors: Array<{ field: string; message: string }>;
+  duplicate_candidates: Array<{
+    fdr_id?: string;
+    fdr_number?: string;
+    reason?: string;
+    is_exact?: boolean;
+  }>;
+  matched_institution_id?: string;
+  matched_institution_name?: string;
+  matched_bank_id?: string;
+  matched_bank_name?: string;
+  matched_branch_id?: string;
+  matched_branch_name?: string;
+  reviewed_by?: string;
+  review_note?: string;
+  imported_fdr_id?: string;
+}
+
+export interface MigrationBatchSummary {
+  id: string;
+  institution_id?: string;
+  institution_name?: string;
+  uploaded_by?: string;
+  file_name: string;
+  storage_path?: string;
+  file_type: string;
+  batch_status: MigrationBatchStatus;
+  total_rows: number;
+  valid_rows: number;
+  invalid_rows: number;
+  imported_rows: number;
+  skipped_rows: number;
+  created_at: string;
+  completed_at?: string;
+}
+
+export interface MigrationBatchDetail extends MigrationBatchSummary {
+  headers: string[];
+  mappings: ColumnMappingItem[];
+  preview_data: Record<string, any>[];
+  rows?: MigrationRowItem[];
+}
+
+export interface MigrationMappingProfile {
+  id: string;
+  profile_name: string;
+  institution_id?: string;
+  column_mapping: Record<string, string>;
+  created_at: string;
+}
+
+export type ComplianceTemplateType =
+  | 'fdr_confirmation'
+  | 'fdr_discrepancy_inquiry'
+  | 'directorate_audit_summons'
+  | 'maturity_intimation'
+  | 'lineage_attestation'
+  | 'lien_release_preliminary'
+  | 'compliance_clarification';
+
+export type ComplianceDocumentStatus =
+  | 'draft'
+  | 'submitted_for_review'
+  | 'approved'
+  | 'returned_for_correction'
+  | 'finalized'
+  | 'signed'
+  | 'revoked';
+
+export interface ComplianceTemplate {
+  id: string;
+  template_name: string;
+  template_type: ComplianceTemplateType;
+  description?: string;
+  template_content: string;
+  version: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ComplianceDocument {
+  id: string;
+  template_id?: string;
+  template_name?: string;
+  template_type: string;
+  institution_id: string;
+  institution_name?: string;
+  fdr_id?: string;
+  fdr_number?: string;
+  document_title: string;
+  reference_number: string;
+  content_text: string;
+  current_version: number;
+  document_status: ComplianceDocumentStatus;
+  created_by?: string;
+  finalized_pdf_path?: string;
+  finalized_pdf_hash?: string;
+  finalized_at?: string;
+  mock_signature_id?: string;
+  mock_signature?: MockSignatureRecord;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ComplianceDocumentVersion {
+  id: string;
+  document_id: string;
+  version_number: number;
+  content_snapshot: string;
+  changed_by?: string;
+  change_summary?: string;
+  sha256_hash: string;
+  created_at: string;
+}
+
+export interface DocumentReview {
+  id: string;
+  document_id: string;
+  version_number: number;
+  reviewer_id?: string;
+  reviewer_name?: string;
+  review_status: 'approved' | 'returned_for_correction';
+  review_comments?: string;
+  reviewed_at: string;
+}
+
+export interface MockSignatureRecord {
+  id: string;
+  document_id: string;
+  signer_display_name: string;
+  signature_reference: string;
+  signed_at: string;
+  status: 'demonstration_only';
+  disclaimer: string;
+}
+
+
 

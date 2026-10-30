@@ -17,6 +17,11 @@ import {
   PlusCircle,
   ShieldAlert,
   Calendar,
+  FileSpreadsheet,
+  ScrollText,
+  CheckCircle2,
+  Zap,
+  ArrowUpRight,
 } from 'lucide-react';
 import {
   fetchInstitutions,
@@ -26,7 +31,6 @@ import {
   fetchFDRStats,
   fetchFDRs,
 } from '../../lib/api';
-import { UpcomingPhasePlaceholder } from '../../components/common/UpcomingPhasePlaceholder';
 import { Badge } from '../../components/ui/Badge';
 import { FDR, FDRSummaryStats } from '../../types';
 
@@ -108,8 +112,8 @@ export const DashboardOverviewPage: React.FC = () => {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1.5">
-              <Badge variant="navy">FDR-Chain Phase 2 Operational</Badge>
-              <Badge variant="success">Repository & Document Vault Active</Badge>
+              <Badge variant="navy">AICTE FDR-Chain Enterprise Platform</Badge>
+              <Badge variant="success">All Subsystems Live (Phases 1-7)</Badge>
             </div>
             <h1 className="text-xl font-bold text-gov-navy">
               Welcome, {user?.full_name || 'Officer'}
@@ -127,13 +131,12 @@ export const DashboardOverviewPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Phase 2 Informational Scope Notice */}
-        <div className="mt-4 p-3 bg-blue-50/70 border border-blue-200/70 rounded-md text-xs text-gov-blue flex items-start gap-2.5">
-          <Info className="w-4 h-4 text-gov-blue mt-0.5 shrink-0" />
+        {/* Live Operational Status Banner */}
+        <div className="mt-4 p-3 bg-emerald-50/70 border border-emerald-200/80 rounded-md text-xs text-emerald-900 flex items-start gap-2.5">
+          <CheckCircle2 className="w-4 h-4 text-emerald-700 mt-0.5 shrink-0" />
           <div className="leading-relaxed">
-            <span className="font-semibold">Phase 2 Operational Scope: </span>
-            The FDR Central Repository is live with client-verified SHA-256 document hashing, institutional lien registration, and pending custody management. All newly registered records initialize at{' '}
-            <strong className="underline">Trust Tier 1 (Pending Bank Verification)</strong>. Bank dual-factor digital signatures and automated heartbeats will activate in Phase 3.
+            <span className="font-semibold text-emerald-800">Operational Subsystems Fully Active: </span>
+            The National FDR-Chain Central Platform is operating across all functional capabilities: Central Repository & SHA-256 Custody, Dual-Factor Commercial Bank Verification (Tier 2/3), Automated Heartbeat & Alert Desk, Rollover & Lineage Engine, Officer Priority Queue, Legacy Data Migration, and Compliance Document Management.
           </div>
         </div>
       </div>
@@ -379,56 +382,204 @@ export const DashboardOverviewPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Phase 2 Invariant Card */}
-          <div className="p-4 rounded-lg bg-amber-50/70 border border-amber-200 text-xs text-amber-900 space-y-2">
-            <div className="flex items-center gap-2 font-bold text-amber-800">
-              <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
-              <span>Trust Tier Architecture</span>
+          {/* Trust Tier Multi-Tier Status Card */}
+          <div className="p-4 rounded-lg bg-indigo-50/70 border border-indigo-200 text-xs text-indigo-950 space-y-2">
+            <div className="flex items-center gap-2 font-bold text-indigo-900">
+              <ShieldCheck className="w-4 h-4 text-indigo-700 shrink-0" />
+              <span>Full-Stack Trust Architecture</span>
             </div>
-            <p className="text-[11px] text-amber-700 leading-relaxed">
-              Tier 1 records reflect depositor declaration. Tier 2 verification requires commercial bank integration in Phase 3.
+            <p className="text-[11px] text-indigo-800 leading-relaxed">
+              Tier 1 (Institution Declared), Tier 2 (Commercial Bank CBS Verified), and Tier 3 (Nodal Officer Ed25519 Cryptographically Signed) verification workflows are active across all regional jurisdictions.
             </p>
           </div>
         </div>
       </div>
 
-      {/* Upcoming Phase Modules Section (Strict Phase Boundary Visualizer) */}
+      {/* Operational Subsystems Directory (Phases 1-7 Fully Unlocked) */}
       <div className="pt-2">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-base font-bold text-gov-navy">
-              Upcoming Phase Modules & Roadmap Extension
+              Enterprise Operational Subsystems Directory
             </h2>
             <p className="text-xs text-gov-muted mt-0.5">
-              Strict Phase 2 boundary maintained. Subsequent capabilities planned for Phase 3 and Phase 4.
+              Comprehensive government governance infrastructure — All 7 core modules operational and interconnected.
             </p>
           </div>
+          <span className="px-2.5 py-1 text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-full flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
+            100% Modules Operational
+          </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <UpcomingPhasePlaceholder
-            phaseNumber={3}
-            moduleName="Bank Nodal Verification & Digital Signatures (Tier 2/3)"
-            description="Commercial bank branch portal for dual-factor verification, e-lien confirmation, and Ed25519 cryptographic token generation."
-            capabilities={[
-              'Direct IFSC Branch Routing & Lien Marking Queues',
-              'Ed25519 Nodal Officer Digital Signatures',
-              'Dual-factor Bank Status Acknowledgement',
-              'Automated Periodic Heartbeat Health Checks',
-            ]}
-          />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Subsystem 1: Central Vault */}
+          <Link
+            to="/fdrs"
+            className="group block p-4 bg-white border border-gov-border rounded-lg shadow-2xs hover:border-gov-blue hover:shadow-xs transition"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-md bg-blue-50 text-blue-700 flex items-center justify-center font-bold text-xs">
+                  P2
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-gov-navy group-hover:text-gov-blue transition-colors">
+                    Central FDR Vault
+                  </h3>
+                  <span className="text-[10px] text-emerald-700 font-medium">Live Repository</span>
+                </div>
+              </div>
+              <ArrowUpRight className="w-4 h-4 text-gov-muted group-hover:text-gov-blue transition-colors" />
+            </div>
+            <p className="text-[11px] text-gov-muted leading-relaxed">
+              Permanent repository with client-side SHA-256 document hashing, custodial metadata, and immutable lifecycle event logs.
+            </p>
+          </Link>
 
-          <UpcomingPhasePlaceholder
-            phaseNumber={4}
-            moduleName="Lien Release & Sovereign Refund Settlement"
-            description="Complete lifecycle closure module enabling formal release orders, invocation workflows, and multi-signature refund reconciliation."
-            capabilities={[
-              'Multi-party Release Order Authorizations',
-              'Automated Encashment & Invocation Pipeline',
-              'Treasury & Public Account Settlement Logs',
-              'AI Assisted Document OCR Validation',
-            ]}
-          />
+          {/* Subsystem 2: Bank Verification */}
+          <Link
+            to="/verification"
+            className="group block p-4 bg-white border border-gov-border rounded-lg shadow-2xs hover:border-gov-blue hover:shadow-xs transition"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-md bg-purple-50 text-purple-700 flex items-center justify-center font-bold text-xs">
+                  P3
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-gov-navy group-hover:text-gov-blue transition-colors">
+                    Bank Verification Desk
+                  </h3>
+                  <span className="text-[10px] text-emerald-700 font-medium">Tier 2/3 Dual-Factor</span>
+                </div>
+              </div>
+              <ArrowUpRight className="w-4 h-4 text-gov-muted group-hover:text-gov-blue transition-colors" />
+            </div>
+            <p className="text-[11px] text-gov-muted leading-relaxed">
+              Branch portal with secure cryptographic nonce tokens and Ed25519 nodal officer digital signatures.
+            </p>
+          </Link>
+
+          {/* Subsystem 3: Heartbeat Monitoring */}
+          <Link
+            to="/heartbeat"
+            className="group block p-4 bg-white border border-gov-border rounded-lg shadow-2xs hover:border-gov-blue hover:shadow-xs transition"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-md bg-rose-50 text-rose-700 flex items-center justify-center font-bold text-xs">
+                  P4
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-gov-navy group-hover:text-gov-blue transition-colors">
+                    Heartbeat Health Desk
+                  </h3>
+                  <span className="text-[10px] text-emerald-700 font-medium">Automated Telemetry</span>
+                </div>
+              </div>
+              <ArrowUpRight className="w-4 h-4 text-gov-muted group-hover:text-gov-blue transition-colors" />
+            </div>
+            <p className="text-[11px] text-gov-muted leading-relaxed">
+              Automated periodic CBS health queries, maturity alerts, and breach escalation for Broken or Stale collateral records.
+            </p>
+          </Link>
+
+          {/* Subsystem 4: Renewal Desk */}
+          <Link
+            to="/renewals"
+            className="group block p-4 bg-white border border-gov-border rounded-lg shadow-2xs hover:border-gov-blue hover:shadow-xs transition"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-md bg-amber-50 text-amber-700 flex items-center justify-center font-bold text-xs">
+                  P5
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-gov-navy group-hover:text-gov-blue transition-colors">
+                    Rollover & Lineage Desk
+                  </h3>
+                  <span className="text-[10px] text-emerald-700 font-medium">Cycle Prevention</span>
+                </div>
+              </div>
+              <ArrowUpRight className="w-4 h-4 text-gov-muted group-hover:text-gov-blue transition-colors" />
+            </div>
+            <p className="text-[11px] text-gov-muted leading-relaxed">
+              Multi-step renewal cases, candidate auto-matching, evidence verification, and DAG lineage traversal without cycles.
+            </p>
+          </Link>
+
+          {/* Subsystem 5: Officer Queue */}
+          <Link
+            to="/officer/queue"
+            className="group block p-4 bg-white border border-gov-border rounded-lg shadow-2xs hover:border-gov-blue hover:shadow-xs transition"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-md bg-indigo-50 text-indigo-700 flex items-center justify-center font-bold text-xs">
+                  P6
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-gov-navy group-hover:text-gov-blue transition-colors">
+                    Priority Task Queue
+                  </h3>
+                  <span className="text-[10px] text-emerald-700 font-medium">Score Engine (0-100)</span>
+                </div>
+              </div>
+              <ArrowUpRight className="w-4 h-4 text-gov-muted group-hover:text-gov-blue transition-colors" />
+            </div>
+            <p className="text-[11px] text-gov-muted leading-relaxed">
+              Automated synchronized regulatory tasks, priority formula weighting, staffing workloads, and supervisory escalation command.
+            </p>
+          </Link>
+
+          {/* Subsystem 6: Legacy Migration */}
+          <Link
+            to="/migrations"
+            className="group block p-4 bg-white border border-gov-border rounded-lg shadow-2xs hover:border-gov-blue hover:shadow-xs transition"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-md bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-xs">
+                  P7
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-gov-navy group-hover:text-gov-blue transition-colors">
+                    Legacy Migration Engine
+                  </h3>
+                  <span className="text-[10px] text-emerald-700 font-medium">Batch Ingestion</span>
+                </div>
+              </div>
+              <ArrowUpRight className="w-4 h-4 text-gov-muted group-hover:text-gov-blue transition-colors" />
+            </div>
+            <p className="text-[11px] text-gov-muted leading-relaxed">
+              Safe CSV/XLSX spreadsheet parsing, smart auto-mapping, duplicate candidate review, and strict Trust Tier 1 vault initialization.
+            </p>
+          </Link>
+
+          {/* Subsystem 7: Compliance Documents */}
+          <Link
+            to="/compliance"
+            className="group block p-4 bg-white border border-gov-border rounded-lg shadow-2xs hover:border-gov-blue hover:shadow-xs transition"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-md bg-teal-50 text-teal-700 flex items-center justify-center font-bold text-xs">
+                  P7
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-gov-navy group-hover:text-gov-blue transition-colors">
+                    Compliance Documents
+                  </h3>
+                  <span className="text-[10px] text-emerald-700 font-medium">Letterhead & Mock Sign</span>
+                </div>
+              </div>
+              <ArrowUpRight className="w-4 h-4 text-gov-muted group-hover:text-gov-blue transition-colors" />
+            </div>
+            <p className="text-[11px] text-gov-muted leading-relaxed">
+              Pre-filled statutory letter generation, supervisory review cycle, version snapshotting, and mock digital signing demonstrations.
+            </p>
+          </Link>
         </div>
       </div>
     </div>

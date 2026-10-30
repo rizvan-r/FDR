@@ -35,6 +35,17 @@ import {
   QueuePolicy,
   OfficerWorkloadSummary,
   OfficerDashboardStats,
+  MigrationBatchSummary,
+  MigrationBatchDetail,
+  MigrationRowItem,
+  ColumnMappingItem,
+  ColumnMappingRequest,
+  MigrationMappingProfile,
+  ComplianceTemplate,
+  ComplianceDocument,
+  ComplianceDocumentVersion,
+  DocumentReview,
+  MockSignatureRecord,
 } from '../types';
 import {
   SEED_REGIONS,
@@ -62,6 +73,10 @@ import {
   SEED_QUEUE_POLICIES,
   SEED_OFFICER_WORKLOAD,
   SEED_OFFICER_DASHBOARD_STATS,
+  SEED_MIGRATION_PROFILES,
+  SEED_MIGRATION_BATCHES,
+  SEED_COMPLIANCE_TEMPLATES,
+  SEED_COMPLIANCE_DOCUMENTS,
 } from './mockData';
 
 // Storage keys for local development persistence
@@ -86,6 +101,10 @@ const STORAGE_KEYS = {
   QUEUE_POLICIES: 'fdr_dev_queue_policies',
   FDR_LINEAGE: 'fdr_dev_lineage',
   RENEWAL_EVIDENCE: 'fdr_dev_renewal_evidence',
+  MIGRATION_BATCHES: 'fdr_dev_migration_batches',
+  MIGRATION_PROFILES: 'fdr_dev_migration_profiles',
+  COMPLIANCE_TEMPLATES: 'fdr_dev_compliance_templates',
+  COMPLIANCE_DOCUMENTS: 'fdr_dev_compliance_documents',
 };
 
 function getLocalOrInit<T>(key: string, seed: T[]): T[] {
@@ -2914,6 +2933,695 @@ export async function updateQueuePolicy(id: string, payload: Partial<QueuePolicy
   }
   throw new Error(`Policy ${id} not found.`);
 }
+
+// ==============================================================================
+// 12. PHASE 7: LEGACY DATA MIGRATION API
+// ==============================================================================
+
+export async function fetchMigrationBatches(): Promise<MigrationBatchSummary[]> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/migrations`, {
+      method: 'GET',
+      headers: { ...headers },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // fallback
+  }
+  const batches = getLocalOrInit(STORAGE_KEYS.MIGRATION_BATCHES, SEED_MIGRATION_BATCHES);
+  return batches.map(({ rows, mappings, preview_data, ...rest }) => rest as MigrationBatchSummary);
+}
+
+export async function fetchMigrationBatch(batchId: string): Promise<MigrationBatchDetail> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/migrations/${batchId}`, {
+      method: 'GET',
+      headers: { ...headers },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // fallback
+  }
+  const batches = getLocalOrInit(STORAGE_KEYS.MIGRATION_BATCHES, SEED_MIGRATION_BATCHES);
+  const b = batches.find((item) => item.id === batchId);
+  if (b) return b;
+  throw new Error(`Migration batch ${batchId} not found.`);
+}
+
+export async function uploadMigrationFile(file: File, institutionId?: string): Promise<MigrationBatchSummary> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const formData = new FormData();
+    formData.append('file', file);
+    if (institutionId) {
+      formData.append('institution_id', institutionId);
+    }
+    const res = await fetch(`${apiUrl}/api/v1/migrations/upload`, {
+      method: 'POST',
+      headers: { Authorization: headers.Authorization },
+      body: formData,
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    const err = await res.json();
+    throw new Error(err.detail || 'Failed to upload migration spreadsheet.');
+  } catch (e: any) {
+    if (e.message?.includes('Failed to upload')) throw e;
+  }
+
+  // Local fallback
+  const batches = getLocalOrInit(STORAGE_KEYS.MIGRATION_BATCHES, SEED_MIGRATION_BATCHES);
+  const newBatch: MigrationBatchDetail = {
+    id: `batch-${Math.random().toString(36).substring(2, 8)}`,
+    institution_id: institutionId || 'inst-01',
+    institution_name: 'National Highways Authority of India',
+    file_name: file.name,
+    file_type: file.name.endsWith('.csv') ? 'csv' : 'xlsx',
+    batch_status: 'uploaded',
+    total_rows: 3,
+    valid_rows: 0,
+    invalid_rows: 0,
+    imported_rows: 0,
+    skipped_rows: 0,
+    created_at: new Date().toISOString(),
+    headers: ['Institution Name', 'Bank Name', 'Branch', 'FDR No', 'Deposit Amount', 'Currency', 'Date of Issue', 'Date of Maturity', 'Interest Rate', 'Lien In Favour', 'Remarks'],
+    mappings: [
+      { source_column: 'Institution Name', target_field: 'institution_name' },
+      { source_column: 'Bank Name', target_field: 'bank_name' },
+      { source_column: 'Branch', target_field: 'branch_name' },
+      { source_column: 'FDR No', target_field: 'fdr_number' },
+      { source_column: 'Deposit Amount', target_field: 'amount' },
+      { source_column: 'Currency', target_field: 'currency' },
+      { source_column: 'Date of Issue', target_field: 'issue_date' },
+      { source_column: 'Date of Maturity', target_field: 'maturity_date' },
+      { source_column: 'Interest Rate', target_field: 'interest_rate' },
+      { source_column: 'Lien In Favour', target_field: 'lien_in_favour' },
+      { source_column: 'Remarks', target_field: 'remarks' },
+    ],
+    preview_data: [],
+    rows: [],
+  };
+  batches.unshift(newBatch);
+  saveLocal(STORAGE_KEYS.MIGRATION_BATCHES, batches);
+  return newBatch;
+}
+
+export async function setColumnMappings(
+  batchId: string,
+  mappings: ColumnMappingItem[],
+  saveAsProfile?: string
+): Promise<ColumnMappingItem[]> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/migrations/${batchId}/mapping`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mappings, save_as_profile: saveAsProfile }),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // fallback
+  }
+
+  const batches = getLocalOrInit(STORAGE_KEYS.MIGRATION_BATCHES, SEED_MIGRATION_BATCHES);
+  const b = batches.find((item) => item.id === batchId);
+  if (b) {
+    b.mappings = mappings;
+    b.batch_status = 'mapping';
+    saveLocal(STORAGE_KEYS.MIGRATION_BATCHES, batches);
+    return mappings;
+  }
+  throw new Error(`Batch ${batchId} not found.`);
+}
+
+export async function validateMigrationBatch(batchId: string): Promise<any> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/migrations/${batchId}/validate`, {
+      method: 'POST',
+      headers: { ...headers },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // fallback
+  }
+
+  const batches = getLocalOrInit(STORAGE_KEYS.MIGRATION_BATCHES, SEED_MIGRATION_BATCHES);
+  const b = batches.find((item) => item.id === batchId);
+  if (b) {
+    b.batch_status = b.invalid_rows > 0 ? 'review_required' : 'ready';
+    saveLocal(STORAGE_KEYS.MIGRATION_BATCHES, batches);
+    return {
+      batch_id: batchId,
+      total_rows: b.total_rows,
+      valid_rows: b.valid_rows,
+      invalid_rows: b.invalid_rows,
+      status: b.batch_status,
+    };
+  }
+  throw new Error(`Batch ${batchId} not found.`);
+}
+
+export async function fetchMigrationErrors(batchId: string): Promise<MigrationRowItem[]> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/migrations/${batchId}/errors`, {
+      method: 'GET',
+      headers: { ...headers },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // fallback
+  }
+
+  const batches = getLocalOrInit(STORAGE_KEYS.MIGRATION_BATCHES, SEED_MIGRATION_BATCHES);
+  const b = batches.find((item) => item.id === batchId);
+  if (b && b.rows) {
+    return b.rows.filter(
+      (r) => r.validation_status === 'invalid' || r.validation_status === 'duplicate_exact' || r.validation_status === 'duplicate_fuzzy'
+    );
+  }
+  return [];
+}
+
+export async function reviewMigrationRow(
+  batchId: string,
+  rowId: string,
+  payload: { action: 'correct' | 'exclude' | 'approve'; corrected_data?: Record<string, any>; review_note?: string }
+): Promise<MigrationRowItem> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/migrations/${batchId}/rows/${rowId}/review`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // fallback
+  }
+
+  const batches = getLocalOrInit(STORAGE_KEYS.MIGRATION_BATCHES, SEED_MIGRATION_BATCHES);
+  const b = batches.find((item) => item.id === batchId);
+  if (b && b.rows) {
+    const row = b.rows.find((r) => r.id === rowId);
+    if (row) {
+      if (payload.action === 'correct' && payload.corrected_data) {
+        Object.assign(row.normalized_data, payload.corrected_data);
+        row.validation_status = 'reviewed';
+        row.validation_errors = [];
+      } else if (payload.action === 'approve') {
+        row.validation_status = 'reviewed';
+      } else if (payload.action === 'exclude') {
+        row.validation_status = 'excluded';
+      }
+      row.review_note = payload.review_note;
+      saveLocal(STORAGE_KEYS.MIGRATION_BATCHES, batches);
+      return row;
+    }
+  }
+  throw new Error(`Row ${rowId} not found in batch ${batchId}.`);
+}
+
+export async function executeMigrationImport(
+  batchId: string,
+  skipFuzzy: boolean = true
+): Promise<{ batch_id: string; status: string; imported_count: number; skipped_count: number }> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/migrations/${batchId}/import`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ skip_fuzzy_duplicates: skipFuzzy }),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // fallback
+  }
+
+  const batches = getLocalOrInit(STORAGE_KEYS.MIGRATION_BATCHES, SEED_MIGRATION_BATCHES);
+  const b = batches.find((item) => item.id === batchId);
+  if (b) {
+    b.batch_status = 'completed';
+    b.imported_rows = b.valid_rows;
+    b.completed_at = new Date().toISOString();
+    saveLocal(STORAGE_KEYS.MIGRATION_BATCHES, batches);
+    return {
+      batch_id: batchId,
+      status: 'completed',
+      imported_count: b.imported_rows,
+      skipped_count: b.invalid_rows,
+    };
+  }
+  throw new Error(`Batch ${batchId} not found.`);
+}
+
+export async function cancelMigrationBatch(batchId: string): Promise<void> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    await fetch(`${apiUrl}/api/v1/migrations/${batchId}/cancel`, {
+      method: 'POST',
+      headers: { ...headers },
+    });
+  } catch {
+    // fallback
+  }
+  const batches = getLocalOrInit(STORAGE_KEYS.MIGRATION_BATCHES, SEED_MIGRATION_BATCHES);
+  const b = batches.find((item) => item.id === batchId);
+  if (b) {
+    b.batch_status = 'cancelled';
+    saveLocal(STORAGE_KEYS.MIGRATION_BATCHES, batches);
+  }
+}
+
+export async function fetchMigrationProfiles(): Promise<MigrationMappingProfile[]> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/migrations/profiles`, {
+      method: 'GET',
+      headers: { ...headers },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // fallback
+  }
+  return getLocalOrInit(STORAGE_KEYS.MIGRATION_PROFILES, SEED_MIGRATION_PROFILES);
+}
+
+// ==============================================================================
+// 13. PHASE 7: COMPLIANCE DOCUMENT MANAGEMENT API
+// ==============================================================================
+
+export async function fetchComplianceTemplates(): Promise<ComplianceTemplate[]> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/compliance/templates`, {
+      method: 'GET',
+      headers: { ...headers },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // fallback
+  }
+  return getLocalOrInit(STORAGE_KEYS.COMPLIANCE_TEMPLATES, SEED_COMPLIANCE_TEMPLATES);
+}
+
+export async function createComplianceTemplate(payload: Partial<ComplianceTemplate>): Promise<ComplianceTemplate> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/compliance/templates`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    const err = await res.json();
+    throw new Error(err.detail || 'Failed to create template.');
+  } catch (e: any) {
+    if (e.message?.includes('Failed to create')) throw e;
+  }
+
+  const templates = getLocalOrInit(STORAGE_KEYS.COMPLIANCE_TEMPLATES, SEED_COMPLIANCE_TEMPLATES);
+  const newTpl: ComplianceTemplate = {
+    id: `template-${Math.random().toString(36).substring(2, 8)}`,
+    template_name: payload.template_name || 'Custom Regulatory Template',
+    template_type: (payload.template_type as any) || 'fdr_confirmation',
+    description: payload.description,
+    template_content: payload.template_content || '',
+    version: 1,
+    is_active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+  templates.push(newTpl);
+  saveLocal(STORAGE_KEYS.COMPLIANCE_TEMPLATES, templates);
+  return newTpl;
+}
+
+export async function updateComplianceTemplate(id: string, payload: Partial<ComplianceTemplate>): Promise<ComplianceTemplate> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/compliance/templates/${id}`, {
+      method: 'PATCH',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // fallback
+  }
+
+  const templates = getLocalOrInit(STORAGE_KEYS.COMPLIANCE_TEMPLATES, SEED_COMPLIANCE_TEMPLATES);
+  const tpl = templates.find((t) => t.id === id);
+  if (tpl) {
+    Object.assign(tpl, payload, { version: tpl.version + 1, updated_at: new Date().toISOString() });
+    saveLocal(STORAGE_KEYS.COMPLIANCE_TEMPLATES, templates);
+    return tpl;
+  }
+  throw new Error(`Template ${id} not found.`);
+}
+
+export async function fetchComplianceDocuments(institutionId?: string): Promise<ComplianceDocument[]> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const url = institutionId
+      ? `${apiUrl}/api/v1/compliance/documents?institution_id=${institutionId}`
+      : `${apiUrl}/api/v1/compliance/documents`;
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: { ...headers },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // fallback
+  }
+
+  const docs = getLocalOrInit(STORAGE_KEYS.COMPLIANCE_DOCUMENTS, SEED_COMPLIANCE_DOCUMENTS);
+  if (institutionId) {
+    return docs.filter((d) => d.institution_id === institutionId);
+  }
+  return docs;
+}
+
+export async function fetchComplianceDocument(id: string): Promise<ComplianceDocument> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/compliance/documents/${id}`, {
+      method: 'GET',
+      headers: { ...headers },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // fallback
+  }
+
+  const docs = getLocalOrInit(STORAGE_KEYS.COMPLIANCE_DOCUMENTS, SEED_COMPLIANCE_DOCUMENTS);
+  const doc = docs.find((d) => d.id === id);
+  if (doc) return doc;
+  throw new Error(`Compliance document ${id} not found.`);
+}
+
+export async function generateComplianceDocument(payload: {
+  template_id: string;
+  institution_id: string;
+  fdr_id?: string;
+  custom_title?: string;
+  custom_parameters?: Record<string, string>;
+}): Promise<ComplianceDocument> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/compliance/documents/generate`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    const err = await res.json();
+    throw new Error(err.detail || 'Failed to generate compliance document.');
+  } catch (e: any) {
+    if (e.message?.includes('Failed to generate')) throw e;
+  }
+
+  const templates = getLocalOrInit(STORAGE_KEYS.COMPLIANCE_TEMPLATES, SEED_COMPLIANCE_TEMPLATES);
+  const tpl = templates.find((t) => t.id === payload.template_id) || templates[0];
+  const docs = getLocalOrInit(STORAGE_KEYS.COMPLIANCE_DOCUMENTS, SEED_COMPLIANCE_DOCUMENTS);
+
+  const refNo = `AICTE/FDR/2026/DOC-${Math.floor(10000 + Math.random() * 90000)}`;
+  const content = tpl.template_content
+    .replace('{{reference_number}}', refNo)
+    .replace('{{generated_date}}', new Date().toLocaleDateString('en-IN'))
+    .replace('{{institution_name}}', 'National Highways Authority of India')
+    .replace('{{fdr_number}}', 'FDR-2026-NHAI-84920')
+    .replace('{{amount}}', '15,000,000')
+    .replace('{{currency}}', 'INR')
+    .replace('{{bank_name}}', 'State Bank of India')
+    .replace('{{branch_name}}', 'SBI Main Branch')
+    .replace('{{maturity_date}}', '2027-01-15')
+    .replace('{{issue_date}}', '2026-01-15')
+    .replace('{{lien_in_favour}}', 'AICTE');
+
+  const newDoc: ComplianceDocument = {
+    id: `doc-${Math.random().toString(36).substring(2, 8)}`,
+    template_id: tpl.id,
+    template_name: tpl.template_name,
+    template_type: tpl.template_type,
+    institution_id: payload.institution_id,
+    institution_name: 'National Highways Authority of India',
+    fdr_id: payload.fdr_id,
+    fdr_number: 'FDR-2026-NHAI-84920',
+    document_title: payload.custom_title || tpl.template_name,
+    reference_number: refNo,
+    content_text: content,
+    current_version: 1,
+    document_status: 'draft',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+
+  docs.unshift(newDoc);
+  saveLocal(STORAGE_KEYS.COMPLIANCE_DOCUMENTS, docs);
+  return newDoc;
+}
+
+export async function updateComplianceDocument(
+  id: string,
+  payload: { document_title?: string; content_text?: string; change_summary?: string }
+): Promise<ComplianceDocument> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/compliance/documents/${id}`, {
+      method: 'PATCH',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // fallback
+  }
+
+  const docs = getLocalOrInit(STORAGE_KEYS.COMPLIANCE_DOCUMENTS, SEED_COMPLIANCE_DOCUMENTS);
+  const doc = docs.find((d) => d.id === id);
+  if (doc) {
+    if (payload.document_title) doc.document_title = payload.document_title;
+    if (payload.content_text) {
+      doc.content_text = payload.content_text;
+      doc.current_version += 1;
+    }
+    doc.updated_at = new Date().toISOString();
+    saveLocal(STORAGE_KEYS.COMPLIANCE_DOCUMENTS, docs);
+    return doc;
+  }
+  throw new Error(`Document ${id} not found.`);
+}
+
+export async function submitComplianceDocumentForReview(id: string): Promise<ComplianceDocument> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/compliance/documents/${id}/submit-review`, {
+      method: 'POST',
+      headers: { ...headers },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // fallback
+  }
+
+  const docs = getLocalOrInit(STORAGE_KEYS.COMPLIANCE_DOCUMENTS, SEED_COMPLIANCE_DOCUMENTS);
+  const doc = docs.find((d) => d.id === id);
+  if (doc) {
+    doc.document_status = 'submitted_for_review';
+    doc.updated_at = new Date().toISOString();
+    saveLocal(STORAGE_KEYS.COMPLIANCE_DOCUMENTS, docs);
+    return doc;
+  }
+  throw new Error(`Document ${id} not found.`);
+}
+
+export async function reviewComplianceDocument(
+  id: string,
+  payload: { action: 'approved' | 'returned_for_correction'; comments?: string }
+): Promise<ComplianceDocument> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/compliance/documents/${id}/review`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // fallback
+  }
+
+  const docs = getLocalOrInit(STORAGE_KEYS.COMPLIANCE_DOCUMENTS, SEED_COMPLIANCE_DOCUMENTS);
+  const doc = docs.find((d) => d.id === id);
+  if (doc) {
+    doc.document_status = payload.action === 'approved' ? 'approved' : 'returned_for_correction';
+    doc.updated_at = new Date().toISOString();
+    saveLocal(STORAGE_KEYS.COMPLIANCE_DOCUMENTS, docs);
+    return doc;
+  }
+  throw new Error(`Document ${id} not found.`);
+}
+
+export async function finalizeComplianceDocument(id: string): Promise<{ status: string; document_id: string; pdf_url: string; size_bytes: number }> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/compliance/documents/${id}/finalize`, {
+      method: 'POST',
+      headers: { ...headers },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // fallback
+  }
+
+  const docs = getLocalOrInit(STORAGE_KEYS.COMPLIANCE_DOCUMENTS, SEED_COMPLIANCE_DOCUMENTS);
+  const doc = docs.find((d) => d.id === id);
+  if (doc) {
+    doc.document_status = 'finalized';
+    doc.finalized_at = new Date().toISOString();
+    doc.finalized_pdf_path = `compliance/${id}/final.pdf`;
+    saveLocal(STORAGE_KEYS.COMPLIANCE_DOCUMENTS, docs);
+    return {
+      status: 'finalized',
+      document_id: id,
+      pdf_url: `/api/v1/compliance/documents/${id}/pdf`,
+      size_bytes: 42000,
+    };
+  }
+  throw new Error(`Document ${id} not found.`);
+}
+
+export async function mockSignComplianceDocument(
+  id: string,
+  payload: { signer_display_name: string; consent_acknowledged: boolean }
+): Promise<MockSignatureRecord> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/compliance/documents/${id}/mock-sign`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // fallback
+  }
+
+  const sigRecord: MockSignatureRecord = {
+    id: `sig-${Math.random().toString(36).substring(2, 8)}`,
+    document_id: id,
+    signer_display_name: payload.signer_display_name,
+    signature_reference: `MOCK-SIG-${Math.floor(10000 + Math.random() * 90000)}-DEMO`,
+    signed_at: new Date().toISOString(),
+    status: 'demonstration_only',
+    disclaimer: 'DEMO — NOT A LEGALLY VALID DIGITAL SIGNATURE',
+  };
+
+  const docs = getLocalOrInit(STORAGE_KEYS.COMPLIANCE_DOCUMENTS, SEED_COMPLIANCE_DOCUMENTS);
+  const doc = docs.find((d) => d.id === id);
+  if (doc) {
+    doc.document_status = 'signed';
+    doc.mock_signature_id = sigRecord.id;
+    doc.mock_signature = sigRecord;
+    doc.updated_at = new Date().toISOString();
+    saveLocal(STORAGE_KEYS.COMPLIANCE_DOCUMENTS, docs);
+  }
+
+  return sigRecord;
+}
+
+export async function fetchDocumentVersions(id: string): Promise<ComplianceDocumentVersion[]> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${apiUrl}/api/v1/compliance/documents/${id}/versions`, {
+      method: 'GET',
+      headers: { ...headers },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // fallback
+  }
+  return [
+    {
+      id: `ver-${id}-1`,
+      document_id: id,
+      version_number: 1,
+      content_snapshot: 'Initial statutory draft pre-filled from Central FDR Vault.',
+      changed_by: 'System Officer',
+      change_summary: 'Initial automated draft generation',
+      sha256_hash: '9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b',
+      created_at: new Date(Date.now() - 3600000).toISOString(),
+    },
+  ];
+}
+
 
 
 

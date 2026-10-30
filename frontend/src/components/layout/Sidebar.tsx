@@ -22,6 +22,10 @@ import {
   ListOrdered,
   CheckSquare,
   Briefcase,
+  UploadCloud,
+  FileSpreadsheet,
+  ScrollText,
+  PenTool,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -256,35 +260,53 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             </nav>
           </div>
 
-          {/* Future Modules Section (Strict Phase Boundary Visualization) */}
-          <div className="pt-4 border-t border-gov-border">
+          {/* Legacy Migration Section (Phase 7 Live) */}
+          <div className="pt-3 border-t border-gov-border">
             <div className="px-3 mb-2 flex items-center justify-between text-[10px] font-bold tracking-wider text-gov-muted uppercase">
-              <span>Upcoming Capabilities</span>
-              <span className="px-1.5 py-0.2 rounded bg-slate-100 text-slate-700 text-[9px] font-semibold">
-                Phase 7
+              <span>Legacy Migration</span>
+              <span className="px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 text-[9px] font-semibold border border-emerald-200">
+                Phase 7 Active
               </span>
             </div>
-            <div className="space-y-1 text-xs text-gray-400">
-              <div className="flex items-center justify-between px-3.5 py-2 rounded-md hover:bg-gray-50 opacity-70 cursor-not-allowed">
-                <span className="flex items-center gap-2.5">
-                  <Coins className="w-3.5 h-3.5" />
-                  <span>Legacy Migration & Ingestion</span>
-                </span>
-                <span className="text-[9px] bg-slate-100 text-slate-600 px-1 py-0.5 rounded border border-slate-200">
-                  Phase 7
-                </span>
-              </div>
+            <nav className="space-y-1">
+              <NavLink to="/migrations" className={navLinkClass} onClick={onClose} end>
+                <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                <span>Migration Batches</span>
+              </NavLink>
 
-              <div className="flex items-center justify-between px-3.5 py-2 rounded-md hover:bg-gray-50 opacity-70 cursor-not-allowed">
-                <span className="flex items-center gap-2.5">
-                  <Lock className="w-3.5 h-3.5" />
-                  <span>OCR & Document Intelligence</span>
-                </span>
-                <span className="text-[9px] bg-slate-100 text-slate-600 px-1 py-0.5 rounded border border-slate-200">
-                  Phase 7
-                </span>
-              </div>
+              {(isAdmin || isBureau || isInstUser) && (
+                <NavLink to="/migrations/upload" className={navLinkClass} onClick={onClose}>
+                  <UploadCloud className="w-4 h-4 text-teal-600" />
+                  <span>Upload Spreadsheet</span>
+                </NavLink>
+              )}
+            </nav>
+          </div>
+
+          {/* Compliance Documents Section (Phase 7 Live) */}
+          <div className="pt-3 border-t border-gov-border">
+            <div className="px-3 mb-2 flex items-center justify-between text-[10px] font-bold tracking-wider text-gov-muted uppercase">
+              <span>Compliance Documents</span>
+              <span className="px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 text-[9px] font-semibold border border-indigo-200">
+                Phase 7 Active
+              </span>
             </div>
+            <nav className="space-y-1">
+              <NavLink to="/compliance" className={navLinkClass} onClick={onClose} end>
+                <ScrollText className="w-4 h-4 text-indigo-600" />
+                <span>Letter Registry</span>
+              </NavLink>
+
+              <NavLink to="/compliance/templates" className={navLinkClass} onClick={onClose}>
+                <FileText className="w-4 h-4 text-blue-600" />
+                <span>Statutory Templates</span>
+              </NavLink>
+
+              <NavLink to="/compliance/generate" className={navLinkClass} onClick={onClose}>
+                <PenTool className="w-4 h-4 text-amber-600" />
+                <span>Generate Notice / Letter</span>
+              </NavLink>
+            </nav>
           </div>
         </div>
 

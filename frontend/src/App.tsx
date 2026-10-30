@@ -37,6 +37,15 @@ import { OfficerWorkloadPage } from './pages/officer/OfficerWorkloadPage';
 import { EscalationCenterPage } from './pages/officer/EscalationCenterPage';
 import { QueuePolicyPage } from './pages/officer/QueuePolicyPage';
 
+// Phase 7: Legacy Migration & Compliance Document Management Pages
+import { MigrationDashboardPage } from './pages/migration/MigrationDashboardPage';
+import { MigrationUploadPage } from './pages/migration/MigrationUploadPage';
+import { MigrationBatchDetailsPage } from './pages/migration/MigrationBatchDetailsPage';
+import { ComplianceDashboardPage } from './pages/compliance/ComplianceDashboardPage';
+import { ComplianceTemplatesPage } from './pages/compliance/ComplianceTemplatesPage';
+import { GenerateComplianceDocumentPage } from './pages/compliance/GenerateComplianceDocumentPage';
+import { ComplianceDocumentDetailPage } from './pages/compliance/ComplianceDocumentDetailPage';
+
 // Main Pages
 import { DashboardOverviewPage } from './pages/dashboard/DashboardOverviewPage';
 import { FDRListPage } from './pages/fdrs/FDRListPage';
@@ -240,6 +249,38 @@ export const App: React.FC = () => {
                   </RoleRoute>
                 }
               />
+
+              {/* Phase 7: Legacy Migration Desk */}
+              <Route path="/migrations" element={<MigrationDashboardPage />} />
+              <Route
+                path="/migrations/upload"
+                element={
+                  <RoleRoute allowedRoles={['system_admin', 'bureau_officer', 'regional_officer']}>
+                    <MigrationUploadPage />
+                  </RoleRoute>
+                }
+              />
+              <Route path="/migrations/:id" element={<MigrationBatchDetailsPage />} />
+
+              {/* Phase 7: Compliance Document Management */}
+              <Route path="/compliance" element={<ComplianceDashboardPage />} />
+              <Route
+                path="/compliance/templates"
+                element={
+                  <RoleRoute allowedRoles={['system_admin', 'bureau_officer']}>
+                    <ComplianceTemplatesPage />
+                  </RoleRoute>
+                }
+              />
+              <Route
+                path="/compliance/generate"
+                element={
+                  <RoleRoute allowedRoles={['system_admin', 'bureau_officer', 'regional_officer']}>
+                    <GenerateComplianceDocumentPage />
+                  </RoleRoute>
+                }
+              />
+              <Route path="/compliance/documents/:id" element={<ComplianceDocumentDetailPage />} />
 
               {/* Profile & Security */}
               <Route path="/profile" element={<ProfilePage />} />
